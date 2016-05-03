@@ -1,0 +1,23 @@
+#!/bin/bash
+
+count=0
+
+while [ ! -e "Grid-N300-H150-Sam1.Rda" ] ; do
+	clear
+	echo "Grid-N300-H150-Sam1.Rda is not a file"
+	echo "$count minutes since killer script has been started"
+	count=$(( count + 1))
+	sleep 60
+done
+
+echo "Grid-N300-H150-Sam1.Rda is a file so now killing mpiexec and all R processes"
+
+killall mpiexec
+all-borg killall RhpcWorker
+all-borg killall R
+
+mv *Rds data/
+
+7z a "Simdat.7z" data -mx9
+
+exit 0

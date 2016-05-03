@@ -1,0 +1,7 @@
+*.Rda
+*.RData
+*.Rout
+*.Rhistory
+*.csv
+*.7z
+*.zip
