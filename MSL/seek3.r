@@ -10,6 +10,7 @@ dbug <- function(){
 
 #Libraries
 library(ctools)
+c.config(2)
 c.library("halton","dplyr","Rcpp","optimx")
 
 # Compile the functions that are passed through to optim
@@ -60,11 +61,13 @@ UH <- function(HH, N, TT, type = "per.subject"){
 
 c.export("UH","genHL","genEUT","CRRA","do.optim","do.optimx")
 
-mapper <- function(genpars, N = 100, HH = 50){
+mapper <- function(genpars, N = 100, HH = 50, itype = "HL"){
 
-	#D <- tbl_df(genHO(genpars, N))
-	D <- tbl_df(genHL(genpars, N))
-	#SIMDAT <<- D <- tbl_df(genHNG(genpars, N))
+	if( itype == "HL"){
+		D <- tbl_df(genHL(genpars, N))
+	}else if( itype == "HNG"){
+		D <- tbl_df(genHNG(genpars, N))
+	}
 
 	A <- D %>%
 			select(starts_with("A")) %>%
@@ -167,17 +170,6 @@ mapper <- function(genpars, N = 100, HH = 50){
 					 })
 
 	out <- MSL_EUT(sim[[2]], h1=HR, h2=HU, Inst=INST) 
-
-
-
-
-
-
-
-
-
-
-
 }
 
 S <- 400
@@ -205,7 +197,7 @@ grid <- rbind(NN,HN)
 
 genpar <- c(.2,.3,.3,.2)
 
-INST <- mapper(genpar, N=100, HH=150)
+INST <- mapper(genpar, N=100, HH=50, itype="HL")
 print(INST)
 
 stop()

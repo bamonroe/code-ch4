@@ -141,7 +141,7 @@ double MSL_EUT(NumericVector par, NumericMatrix h1, NumericMatrix h2, List Inst)
 
 	NumericVector subprob(N);
 
-	NumericVector simprob(h);
+	arma::rowvec simprob(h);
 
 	for(int n = 0; n < N; n++){
 		
@@ -192,7 +192,7 @@ double MSL_EUT(NumericVector par, NumericMatrix h1, NumericMatrix h2, List Inst)
 			}
 			
 			// Re-base utility of B and add in context and fechner
-			UB1  = (UB/ctx/mu) - (UA/ctx/mu);
+			UB1  = (UB-UA)/ctx/mu[i];
 
 			// If we have no issues, this is the choice probability of A
 			PA = (1.0 / (1.0 + exp(UB1)));
@@ -210,18 +210,29 @@ double MSL_EUT(NumericVector par, NumericMatrix h1, NumericMatrix h2, List Inst)
 			NumericVector Bprob = 1.0 - Aprob;
 
 			// Grab the choice probability for the chosen option
-			sim(_,i) = ifelse(choice==0, Aprob, Bprob);
+			
+			NumericVector choiceprob = ifelse(choice==0, Aprob, Bprob);
+			sim(_,i) = choiceprob;
+
+
+//			Rcout << "r: " << r[i] << std::endl;
+//			Rcout << "mu: " << mu[i] << std::endl;
+//			Rcout << choiceprob << std::endl;
+//			Rcout << "new" << std::endl;
 			
 		}
 		
-		simprob.fill(1.0);
+		arma::mat simArma = Rcpp::as<arma::mat>(sim);
 
-		for(int i = 0; i < rnum ; i++){
-			simprob = simprob * sim(i,_);
-		}
+		simprob = prod(simArma,0);
 
-		subprob[n] = mean(simprob);
+//		Rcout << simprob << std::endl;
+		
+		double spb = mean(simprob);
 
+		subprob[n] = spb;
+
+//		Rcout << subprob[n] << std::endl;
 //		Rcout << "here" << dbug << " " <<subprob[n] << std::endl; dbug += 1;
 
 	}

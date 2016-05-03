@@ -293,9 +293,11 @@ do.optimx3 <- function(par, HR, HU, inst,
 				error = function(x){NULL})
 
 
+	tryCatch(
 	if (is.na(hess) | is.null(hess)){
 		return(NULL)
-	}
+	} , warning = function(x){})
+
 
 
 	# Split out the hessian to return it piece by piece
