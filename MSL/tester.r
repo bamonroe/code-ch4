@@ -92,6 +92,7 @@ mapper <- function(genpars, N = 100, HH = 50, itype = "HL"){
 	SID <- as.vector(D$ID)
 
 	sampars <- c(mean(D$r),sd(D$r),mean(D$mu),sd(D$mu), cor(D$r,D$mu))
+	genpars <- c(genpars,0)
 
 	rmr <- hunif(5, min = -1.5, max = 1, prime = 3)
 	rsr <- hunif(5, min = 0.1, max = .7, prime = 11)
@@ -130,15 +131,45 @@ mapper <- function(genpars, N = 100, HH = 50, itype = "HL"){
 	HR <- Hseq$HR
 	HU <- Hseq$HU
 
-	config  <- list(method="BFGS", HH = HH, poppars=genpars, sampars=sampars)
 	config  <- list(method="Nelder-Mead", HH = HH, poppars=genpars, sampars=sampars)
+	config  <- list(method="BFGS", HH = HH, poppars=genpars, sampars=sampars)
 
-	control <- list(trace=0, REPORT = 1, kkt = T, usenumDeriv = T)
+	control <- list(trace=2, REPORT = 1, kkt = T, usenumDeriv = T)
 
 	inst <- data.frame(cbind(A,pA,B,pB,Max,Min,choice,SID))
 
-	res <- lapply(sim, do.optimx3, HR=HR, HU=HU, inst=inst, config=config, control=control)
+	print(sim[[2]])
+	res <- do.optimx3(sim[[2]], HR=HR, HU=HU, inst=inst, config=config, control=control)
+	return(res)
 
+	#res <- lapply(sim, do.optimx2, HR=HR, HU=HU, inst=inst, config=config, control=control)
+
+
+	perSID <- split(x=inst, f=inst$SID)
+
+	INST <- lapply(perSID,function(x){
+							A <- x %>%
+									select(starts_with("A")) %>%
+									as.matrix()
+							B <- x %>%
+									select(starts_with("B")) %>%
+									as.matrix()
+							pA <- x %>%
+									select(starts_with("pA")) %>%
+									as.matrix()
+							pB <- x %>%
+									select(starts_with("pB")) %>%
+									as.matrix()
+							Min    <- as.vector(x$Min)
+							Max    <- as.vector(x$Max)
+							choice <- as.vector(x$choice)
+							SID    <- as.vector(x$SID)
+
+							list(A=A, B=B, pA=pA, pB=pB, Min=Min, Max=Max, choice=choice, SID=SID)
+					 
+					 })
+
+	out <- MSL_EUT(sim[[2]], h1=HR, h2=HU, Inst=INST) 
 }
 
 S <- 400
@@ -147,23 +178,29 @@ RM <- hunif(S, min = -1.9, max = 1.55, prime = 3)
 RS <- hunif(S, min = 0.10, max = 0.70, prime = 13)
 UM <- hunif(S, min = 0.10, max = 0.70, prime = 7)
 US <- hunif(S, min = 0.10, max = 0.70, prime = 11)
-RH <- rep(0,S)
 
 #RM <- hunif(S, min = -.1 , max = 0.55, prime = 3)
 #RS <- hunif(S, min = 0.10, max = 0.40, prime = 13)
 #UM <- hunif(S, min = 0.10, max = 0.40, prime = 7)
 #US <- hunif(S, min = 0.10, max = 0.40, prime = 11)
 
-SIM <- data.frame(matrix(c(RM,RS,UM,US,RH), nrow = 4, byrow = T))
-rownames(SIM) <- c("rm", "rs", "um", "us", "rh")
+SIM <- data.frame(matrix(c(RM,RS,UM,US), nrow = 4, byrow = T))
+rownames(SIM) <- c("rm", "rs", "um", "us")
 
 NN <- c( 300, 400, 400 )
 HN <- c( 350, 200, 350 )
 
-NN <- c( 100, 200, 300)
-HN <- c( 150, 150, 150)
+NN <- c( 300)
+HN <- c( 150)
 
 grid <- rbind(NN,HN)
+
+genpar <- c(.2,.3,.3,.2)
+
+INST <- mapper(genpar, N=100, HH=50, itype="HL")
+print(INST)
+
+stop()
 
 # How many times to resample the SIM grid. SIM doesn't change, because of hunif, but the generation
 # of choice data draws a new sample using the same population parameters.
@@ -171,15 +208,14 @@ sample.start <- 2
 sample.end <- 2
 
 for(s in sample.start:sample.end){
-	for(i in c("HL","HNG")){
-		for( g in 1:ncol(grid)){
+	for( i in 1:ncol(grid)){
 
-			n <- grid[1,g]
-			hh <- grid[2,g]
+		n <- grid[1,i]
+		hh <- grid[2,i]
 
-			RES <- c.lapplyLB(SIM, mapper, N = n, HH = hh, itype = i)
-			#RES <- lapply(SIM, mapper, N = n, HH = hh)
-			save(RES, file = paste0("Inst-",i,"-N",n,"-H",hh,"-Sam",s,".Rda"))
-		}
+		#RES <- c.lapplyLB(SIM, mapper, N = n, HH = hh)
+		RES <- lapply(SIM, mapper, N = n, HH = hh)
+		#save(RES, file = paste0("Grid-N",n,"-H",hh,"-Sam",s,".Rda"))
 	}
+
 }
