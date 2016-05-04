@@ -50,11 +50,14 @@ mapper <- function(genpars, N = 100, HH = 50, itype = "HL"){
 
 	sampars <- c(mean(D$r),sd(D$r),mean(D$mu),sd(D$mu), cor(D$r,D$mu))
 
-	rmr <- hunif(5, min = -.5, max = 1, prime = 3)
-	rsr <- hunif(5, min = 0.1, max = .5, prime = 11)
-	umr <- hunif(5, min = 0.1, max = .5, prime = 17)
-	usr <- hunif(5, min = 0.1, max = .5, prime = 7)
-	rhr <- hunif(5, min = -.05, max = .05, prime = 7)
+	# How many random places to initialize the optimization
+	init.num <- 5
+
+	rmr <- hunif(init.num, min = -.5, max = 1, prime = 3)
+	rsr <- hunif(init.num, min = 0.1, max = .5, prime = 11)
+	umr <- hunif(init.num, min = 0.1, max = .5, prime = 17)
+	usr <- hunif(init.num, min = 0.1, max = .5, prime = 7)
+	rhr <- hunif(init.num, min = -.05, max = .05, prime = 7)
 
 	# The grid of parameters for our initial values
 	rm <- c(rmr)
@@ -92,7 +95,7 @@ mapper <- function(genpars, N = 100, HH = 50, itype = "HL"){
 
 	inst <- data.frame(cbind(A,pA,B,pB,Max,Min,choice,SID))
 
-	res <- lapply(sim, do.optimx, HR=HR, HU=HU, inst=inst, config=config, control=control)
+	res <- lapply(sim, try.optimx, HR=HR, HU=HU, inst=inst, config=config, control=control)
 
 	return(res)
 
