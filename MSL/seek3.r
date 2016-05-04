@@ -2,25 +2,27 @@
 rm(list=ls())
 gc()
 
-dcount <<- 0
-dbug <- function(){
-	dcount <<- dcount + 1
-	print(paste("here",dcount))
-}
-
 #Libraries
 library(ctools)
 c.config(2)
 c.library("halton","dplyr","Rcpp","optimx")
 
+
+dcount <<- 0
+dbug <- function(){
+	dcount <<- dcount + 1
+	message(paste("here",dcount))
+}
+c.export("dcount","dbug",push=F)
+
+
 # Compile the functions that are passed through to optim
-c.call(Rcpp::sourceCpp,"../Rcpp/sim3.cpp")
+c.sourceCpp("../Rcpp/sim3.cpp")
 
 # Source 'do.optim', the function which calls optim and parses the output
-source("optim.r")
-
-# Load in/generate the dataset we want to estimate over
-source("../choice-gen/geninst.r")		# genHL function takes pars and subject number as arguments
+# and load in/generate the dataset we want to estimate over
+# genHL function takes pars and subject number as arguments
+c.source("optim.r","../choice-gen/geninst.r")
 
 UH <- function(HH, N, TT, type = "per.subject"){
 
@@ -59,7 +61,6 @@ UH <- function(HH, N, TT, type = "per.subject"){
 
 }
 
-c.export("UH","genHL","genEUT","CRRA","do.optim","do.optimx")
 
 mapper <- function(genpars, N = 100, HH = 50, itype = "HL"){
 
@@ -93,11 +94,11 @@ mapper <- function(genpars, N = 100, HH = 50, itype = "HL"){
 
 	sampars <- c(mean(D$r),sd(D$r),mean(D$mu),sd(D$mu), cor(D$r,D$mu))
 
-	rmr <- hunif(5, min = -1.5, max = 1, prime = 3)
-	rsr <- hunif(5, min = 0.1, max = .7, prime = 11)
-	umr <- hunif(5, min = 0.1, max = .7, prime = 17)
-	usr <- hunif(5, min = 0.1, max = .7, prime = 7)
-	rhr <- hunif(5, min = -1, max = 1, prime = 7)
+	rmr <- hunif(5, min = -.5, max = 1, prime = 3)
+	rsr <- hunif(5, min = 0.1, max = .5, prime = 11)
+	umr <- hunif(5, min = 0.1, max = .5, prime = 17)
+	usr <- hunif(5, min = 0.1, max = .5, prime = 7)
+	rhr <- hunif(5, min = -.05, max = .05, prime = 7)
 
 	# The grid of parameters for our initial values
 	rm <- c(rmr)
@@ -107,11 +108,11 @@ mapper <- function(genpars, N = 100, HH = 50, itype = "HL"){
 	rh <- c(rhr)
 
 	# For Testing
-	rm <- c(genpars[1], sampars[1])
-	rs <- c(genpars[2], sampars[2])
-	um <- c(genpars[3], sampars[3])
-	us <- c(genpars[4], sampars[4])
-	rh <- c(genpars[5], sampars[5])
+	#rm <- c(genpars[1], sampars[1])
+	#rs <- c(genpars[2], sampars[2])
+	#um <- c(genpars[3], sampars[3])
+	#us <- c(genpars[4], sampars[4])
+	#rh <- c(genpars[5], sampars[5])
 
 	sim <- data.frame(matrix(c(rm,rs,um,us,rh), nrow = 5, byrow = T))
 
@@ -137,16 +138,18 @@ mapper <- function(genpars, N = 100, HH = 50, itype = "HL"){
 
 	inst <- data.frame(cbind(A,pA,B,pB,Max,Min,choice,SID))
 
-	res <- lapply(sim, do.optimx3, HR=HR, HU=HU, inst=inst, config=config, control=control)
+	res <- lapply(sim, do.optimx, HR=HR, HU=HU, inst=inst, config=config, control=control)
+
+	return(res)
 
 }
 
-S <- 400
+S <- 500
 
-RM <- hunif(S, min = -1.9, max = 1.55, prime = 3)
+RM <- hunif(S, min = -.5, max = 1, prime = 3)
 RS <- hunif(S, min = 0.10, max = 0.70, prime = 13)
-UM <- hunif(S, min = 0.10, max = 0.70, prime = 7)
-US <- hunif(S, min = 0.10, max = 0.70, prime = 11)
+UM <- hunif(S, min = 0.10, max = 0.60, prime = 7)
+US <- hunif(S, min = 0.10, max = 0.60, prime = 11)
 RH <- rep(0,S)
 
 #RM <- hunif(S, min = -.1 , max = 0.55, prime = 3)
@@ -154,7 +157,7 @@ RH <- rep(0,S)
 #UM <- hunif(S, min = 0.10, max = 0.40, prime = 7)
 #US <- hunif(S, min = 0.10, max = 0.40, prime = 11)
 
-SIM <- data.frame(matrix(c(RM,RS,UM,US,RH), nrow = 4, byrow = T))
+SIM <- data.frame(matrix(c(RM,RS,UM,US,RH), nrow = 5, byrow = T))
 rownames(SIM) <- c("rm", "rs", "um", "us", "rh")
 
 NN <- c( 300, 400, 400 )
@@ -170,6 +173,8 @@ grid <- rbind(NN,HN)
 sample.start <- 2
 sample.end <- 2
 
+c.export("UH")
+
 for(s in sample.start:sample.end){
 	for(i in c("HL","HNG")){
 		for( g in 1:ncol(grid)){
@@ -177,9 +182,11 @@ for(s in sample.start:sample.end){
 			n <- grid[1,g]
 			hh <- grid[2,g]
 
+			datdir <- "../data/MSL-Sim/"
+
 			RES <- c.lapplyLB(SIM, mapper, N = n, HH = hh, itype = i)
 			#RES <- lapply(SIM, mapper, N = n, HH = hh)
-			save(RES, file = paste0("Inst-",i,"-N",n,"-H",hh,"-Sam",s,".Rda"))
+			save(RES, file = paste0(datdir,"Inst-",i,"-N",n,"-H",hh,"-Sam",s,".Rda"))
 		}
 	}
 }

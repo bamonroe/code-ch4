@@ -84,12 +84,12 @@ genHNG <- function(par,N){
 	Max <- apply( cbind(pA,pB,A,B) ,1, context, Max = T )
 	Min <- apply( cbind(pA,pB,A,B) ,1, context, Max = F )
 
-	A  <- A[1:40,]
-	B  <- B[1:40,]
-	pA <- pA[1:40,]
-	pB <- pB[1:40,]
-	Min <-Min[1:40]
-	Max <-Max[1:40]
+	#A  <- A[1:40,]
+	#B  <- B[1:40,]
+	#pA <- pA[1:40,]
+	#pB <- pB[1:40,]
+	#Min <-Min[1:40]
+	#Max <-Max[1:40]
 
 	genEUT(par=par, N=N, A=A, B=B, pA=pA, pB=pB, Min=Min, Max=Max)
 
