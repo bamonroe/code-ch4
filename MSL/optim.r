@@ -1,6 +1,17 @@
+
+try.optimx <- function(par, HR, HU, inst,
+					 config = list(method="Nelder-Mead", UH = "Unknown", HH = ncol(HR)), 
+					 control= list(trace=2, REPORT = 1, kkt = T, usenumDeriv = T, dowarn = F)){
+
+	tryCatch(do.optimx(par, HR, HU, inst, config, control),
+			 error= function(x){paste0("Error with parameters ",par)}
+			 )
+
+}
+
 do.optimx <- function(par, HR, HU, inst,
 					 config = list(method="Nelder-Mead", UH = "Unknown", HH = ncol(HR)), 
-					 control= list(trace=2, REPORT = 1, kkt = T, usenumDeriv = T)){
+					 control= list(trace=2, REPORT = 1, kkt = T, usenumDeriv = T, dowarn = F)){
 
 	perSID <- split(x=inst, f=inst$SID)
 
@@ -26,18 +37,14 @@ do.optimx <- function(par, HR, HU, inst,
 					 
 					 })
 
-#	m <- optimx(par = par, fn = MSL_EUT, 
-	m <- tryCatch(optimx(par = par, fn = MSL_EUT, 
+	m <- optimx(par = par, fn = MSL_EUT, 
 						 h1 = HR, h2 = HU, 
 						 Inst = INST,
-						 method=config$method, hessian = T, control=control),
-				error = function(x){NULL})
+						 method=config$method, hessian = T, control=control)
 
 	hess <-attr(m, "details")[config$method,"nhatend"][[1]]
 
-	fisher <- tryCatch(solve(hess), 
-				error = function(x){NULL})
-
+	fisher <- solve(hess)
 
 	tryCatch(
 	if (is.na(hess) | is.null(hess) | is.na(fisher) | is.null(fisher)){

@@ -4,19 +4,10 @@ gc()
 
 #Libraries
 library(ctools)
-c.config(2)
 c.library("halton","dplyr","Rcpp","optimx")
 
-
-dcount <<- 0
-dbug <- function(){
-	dcount <<- dcount + 1
-	message(paste("here",dcount))
-}
-c.export("dcount","dbug",push=F)
-
 # Compile the functions that are passed through to optim
-c.sourceCpp("../Rcpp/sim.cpp")
+c.sourceCpp("../Rcpp/sim.cpp", on.main=F)
 
 # Source 'do.optim', the function which calls optim and parses the output
 # and load in/generate the dataset we want to estimate over
@@ -25,47 +16,7 @@ c.sourceCpp("../Rcpp/sim.cpp")
 # are only called up once.
 sourcefiles <- c("optim.r", 
 				 "../choice-gen/geninst.r")
-c.source(sourcefiles)
-
-UH <- function(HH, N, TT, type = "per.subject"){
-
-	if (type == "per.subject"){
-	
-		HR <- matrix(hunif(HH*N , prime = 3 ), nrow = N, ncol = HH, byrow=F)
-		HU <- matrix(hunif(HH*N , prime = 7 ), nrow = N, ncol = HH, byrow=F)
-
-		#HR <- matrix(runif(HH*N ), nrow = N, ncol = HH, byrow=F)
-		#HU <- matrix(runif(HH*N ), nrow = N, ncol = HH, byrow=F)
-
-		return(list(HR=HR,HU=HU))
-
-		HR <- cbind(1:nrow(HR), HR)
-		HU <- cbind(1:nrow(HU), HU)
-
-		HR <- do.call(rbind,replicate(TT, HR, simplify=F))
-		HU <- do.call(rbind,replicate(TT, HU, simplify=F))
-
-		HR <- HR[order(HR[,1]),2:ncol(HR)]
-		HU <- HU[order(HU[,1]),2:ncol(HU)]
-
-	}else if(type == "per.H"){
-	
-		HR <- matrix(halton(HH , prime = 3), nrow = N*TT, ncol = HH, byrow = T)
-		HU <- matrix(halton(HH , prime = 7), nrow = N*TT, ncol = HH, byrow = T)
-	
-	}else if(type == "per.obs"){
-	
-		HR <- matrix(halton(HH*N*TT , prime = 3), nrow = N*TT, ncol = HH, byrow = F)
-		HU <- matrix(halton(HH*N*TT , prime = 7), nrow = N*TT, ncol = HH, byrow = F)
-	
-	}
-
-	return(list(HR=HR,HU=HU))
-
-}
-
-# Will need the UH function inside the mapper function
-c.export("UH")
+c.source(sourcefiles, on.main=F)
 
 mapper <- function(genpars, N = 100, HH = 50, itype = "HL"){
 
@@ -131,15 +82,13 @@ mapper <- function(genpars, N = 100, HH = 50, itype = "HL"){
 	htype <- "per.subject"  # Different value for each subject
 	subjects <- max(D$ID)
 
-	Hseq <- UH(HH, subjects, nrow(D)/subjects, type = htype)
-
-	HR <- Hseq$HR
-	HU <- Hseq$HU
+	HR <- matrix(hunif(HH*N , prime = 3 ), nrow = N, ncol = HH, byrow=F)
+	HU <- matrix(hunif(HH*N , prime = 7 ), nrow = N, ncol = HH, byrow=F)
 
 	config  <- list(method="BFGS", HH = HH, poppars=genpars, sampars=sampars)
 	config  <- list(method="Nelder-Mead", HH = HH, poppars=genpars, sampars=sampars)
 
-	control <- list(trace=0, REPORT = 1, kkt = T, usenumDeriv = T)
+	control <- list(trace=0, REPORT = 1, kkt = T, usenumDeriv = T, dowarn = F)
 
 	inst <- data.frame(cbind(A,pA,B,pB,Max,Min,choice,SID))
 
@@ -149,22 +98,20 @@ mapper <- function(genpars, N = 100, HH = 50, itype = "HL"){
 
 }
 
+# How fine do we want the generation grid to be?
 S <- 500
 
-RM <- hunif(S, min = -.5, max = 1, prime = 3)
-RS <- hunif(S, min = 0.10, max = 0.70, prime = 13)
-UM <- hunif(S, min = 0.10, max = 0.60, prime = 7)
-US <- hunif(S, min = 0.10, max = 0.60, prime = 11)
-RH <- rep(0,S)
+RM <- hunif(S, min = -.5, max = 1, prime = 3)         # Mean of the CRRA distribution
+RS <- hunif(S, min = 0.10, max = 0.70, prime = 13)    # Standard Deviation of the CRRA distribution
+UM <- hunif(S, min = 0.10, max = 0.60, prime = 7)     # Mean of the mu distribution
+US <- hunif(S, min = 0.10, max = 0.60, prime = 11)    # Standard Deviation of the mu distribution
+RH <- rep(0,S)                                        # Correlation coefficient placeholder
 
 SIM <- data.frame(matrix(c(RM,RS,UM,US,RH), nrow = 5, byrow = T))
 rownames(SIM) <- c("rm", "rs", "um", "us", "rh")
 
-NN <- c( 300, 400, 400 )
-HN <- c( 350, 200, 350 )
-
-NN <- c( 100, 200, 300)
-HN <- c( 150, 150, 150)
+NN <- c( 100, 200, 300)    # Sample size of generated dataset
+HN <- c( 150, 150, 150)    # Number of H draws to be used in estimation
 
 grid <- rbind(NN,HN)
 
