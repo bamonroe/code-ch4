@@ -111,10 +111,11 @@ do.optimx <- function(par, HR, HU, inst,
 
 	rownames(mm) <- c("rm","rs","um","us","rh")
 	# Print these things out
-	cat("\n\n")
-	print(config$simnum)
+	cat("\n")
+	cat(config$simnum)
+	cat("\n")
 	print(mm)
-	cat("\n\n")
+	cat("\n")
 	return(mm)
 
 }

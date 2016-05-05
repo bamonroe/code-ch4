@@ -21,7 +21,7 @@ c.source(sourcefiles, on.main=F)
 mapper <- function(genpars, N = 100, HH = 50, itype = "HL"){
 
 	simnum <- genpars[6]
-	genpars -- genpars[1:5]
+	genpars <- genpars[1:5]
 
 	if( itype == "HL"){
 		D <- tbl_df(genHL(genpars, N))
