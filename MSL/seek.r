@@ -20,6 +20,9 @@ c.source(sourcefiles, on.main=F)
 
 mapper <- function(genpars, N = 100, HH = 50, itype = "HL"){
 
+	simnum <- genpars[6]
+	genpars -- genpars[1:5]
+
 	if( itype == "HL"){
 		D <- tbl_df(genHL(genpars, N))
 	}else if( itype == "HNG"){
@@ -50,7 +53,7 @@ mapper <- function(genpars, N = 100, HH = 50, itype = "HL"){
 
 	sampars <- c(mean(D$r),sd(D$r),mean(D$mu),sd(D$mu), cor(D$r,D$mu))
 
-	# How many random places to initialize the optimization
+	# How many random places to initialize the optimizatio
 	init.num <- 5
 
 	rmr <- hunif(init.num, min = -.5, max = 1, prime = 3)
@@ -85,11 +88,11 @@ mapper <- function(genpars, N = 100, HH = 50, itype = "HL"){
 	htype <- "per.subject"  # Different value for each subject
 	subjects <- max(D$ID)
 
-	HR <- matrix(hunif(HH*N , prime = 3 ), nrow = N, ncol = HH, byrow=F)
-	HU <- matrix(hunif(HH*N , prime = 7 ), nrow = N, ncol = HH, byrow=F)
+	HR <- matrix(hunif(HH*N ,prime = 13, burn=45 ), nrow = N, ncol = HH, byrow=F)
+	HU <- matrix(hunif(HH*N ,prime = 17, burn=45 ), nrow = N, ncol = HH, byrow=F)
 
-	config  <- list(method="BFGS", HH = HH, poppars=genpars, sampars=sampars)
-	config  <- list(method="Nelder-Mead", HH = HH, poppars=genpars, sampars=sampars)
+	config  <- list(method="BFGS", HH = HH, poppars=genpars, sampars=sampars, simnum=simnum)
+	config  <- list(method="Nelder-Mead", HH = HH, poppars=genpars, sampars=sampars, simnum=simnum)
 
 	control <- list(trace=0, REPORT = 1, kkt = T, usenumDeriv = T, dowarn = F)
 
@@ -110,11 +113,14 @@ UM <- hunif(S, min = 0.10, max = 0.60, prime = 7)     # Mean of the mu distribut
 US <- hunif(S, min = 0.10, max = 0.60, prime = 11)    # Standard Deviation of the mu distribution
 RH <- rep(0,S)                                        # Correlation coefficient placeholder
 
-SIM <- data.frame(matrix(c(RM,RS,UM,US,RH), nrow = 5, byrow = T))
-rownames(SIM) <- c("rm", "rs", "um", "us", "rh")
+SIM <- data.frame(matrix(c(RM, RS, UM, US, RH, 1:S), nrow = 6, byrow = T))
+rownames(SIM) <- c("rm", "rs", "um", "us", "rh", "snum")
 
 NN <- c( 100, 200, 300)    # Sample size of generated dataset
 HN <- c( 150, 150, 150)    # Number of H draws to be used in estimation
+
+NN <- c( 300)    # Sample size of generated dataset
+HN <- c( 350)    # Number of H draws to be used in estimation
 
 grid <- rbind(NN,HN)
 
