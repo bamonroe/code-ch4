@@ -13,8 +13,14 @@ do.optimx <- function(par, HR, HU, inst,
 					 config = list(method="Nelder-Mead", UH = "Unknown", HH = ncol(HR)), 
 					 control= list(trace=2, REPORT = 1, kkt = T, usenumDeriv = T, dowarn = F)){
 
+	# Keep track of what initial par-set we're on
+	initnum <- par[6]
+	par <- par[1:5]
+
+	# Split the passed instrument into a list by subject ID
 	perSID <- split(x=inst, f=inst$SID)
 
+	# Split each element of the list into a list of the important elements
 	INST <- lapply(perSID,function(x){
 							A <- x %>%
 									select(starts_with("A")) %>%
@@ -37,15 +43,17 @@ do.optimx <- function(par, HR, HU, inst,
 					 
 					 })
 
+	# Run the optimization
 	m <- optimx(par = par, fn = MSL_EUT, 
 						 h1 = HR, h2 = HU, 
 						 Inst = INST,
 						 method=config$method, hessian = T, control=control)
 
+	# Retrieve and solve the hessian matrix
 	hess <-attr(m, "details")[config$method,"nhatend"][[1]]
-
 	fisher <- solve(hess)
 
+	# If the hessian can't be solved (isn't positive semi-definite) ignore these results, they're not a real optimum
 	tryCatch(
 	if (is.na(hess) | is.null(hess) | is.na(fisher) | is.null(fisher)){
 		return(NULL)
@@ -61,7 +69,7 @@ do.optimx <- function(par, HR, HU, inst,
 	# Get the square root of it
 	se <- sqrt(diag(fisher))
 
-	# Retireve the solve parameters
+	# Retrieve the solve parameters
 	spars <- do.call(c,m[1,1:length(par)])
 
 	# Get the 95% confidence interval
@@ -97,7 +105,7 @@ do.optimx <- function(par, HR, HU, inst,
 	start[2:4] <- exp(par[2:4])^(1/3)
 	start[5] <- (exp(par[5]) / ( 1 + exp(par[5]))) * 2 - 1
 
-	# Save everything in a convienient place
+	# Save everything in a convenient place
 	mm <- data.frame(poppar = config$poppar, sampar = config$sampar, init = start, est = spars, par = tt,
 					se = ts, lower = tl, upper = tu, pvalue = pval, llike = m$value, 
 					Subjects = length(perSID), Obs = nrow(inst), H = config$HH)
@@ -111,11 +119,11 @@ do.optimx <- function(par, HR, HU, inst,
 
 	rownames(mm) <- c("rm","rs","um","us","rh")
 	# Print these things out
+	mesg <- paste0("Simnun: ",config$simnum," Init#: ",initnum)
 	cat("\n")
-	cat(config$simnum)
+	cat(mesg)
 	cat("\n")
 	print(mm)
-	cat("\n")
 	return(mm)
 
 }

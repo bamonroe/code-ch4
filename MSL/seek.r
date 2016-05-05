@@ -76,7 +76,7 @@ mapper <- function(genpars, N = 100, HH = 50, itype = "HL"){
 	#us <- c(genpars[4], sampars[4])
 	#rh <- c(genpars[5], sampars[5])
 
-	sim <- data.frame(matrix(c(rm,rs,um,us,rh), nrow = 5, byrow = T))
+	sim <- data.frame(matrix(c(rm,rs,um,us,rh,1:init.num), nrow = 6, byrow = T))
 
 	# We do exp(x)^(1/3) to bound the parameter to > 0, so let's transform these
 	# intitial  parameters to this bounding
