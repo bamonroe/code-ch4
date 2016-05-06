@@ -13,18 +13,63 @@ context <- function(x, Max){
 	ifelse(Max, max(y), min(y))
 }
 
+# Supply the standard deviations and the correlation coefficients and get back
+# the covariance matrix
+mkcov <- function(sd,rho){
+
+	z <- .5 * ((8*length(rho) + 1)^.5 +1)
+	RHO <- diag(x=1, nrow=z, ncol=z)
+	count <- 0
+	for(row in 1:(z-1)){
+		for(col in (row+1):z){
+			count <- count + 1
+			RHO[row,col] <- rho[count]
+		}
+	}
+
+	RHO[lower.tri(RHO)] <- RHO[upper.tri(RHO)]
+
+	sigma <- diag(x=1, nrow=z, ncol=z)
+	# Fill out the covariance matrix
+	for(row in 1:z){
+		for(col in 1:z){
+			sigma[row,col] = sd[row] * sd[col] * RHO[row,col];
+		}
+	}
+
+	sigma
+
+}
+
 
 genEUT <- function(par, N, A, B, pA, pB, Min, Max){
 
-	rm <- par[1]
-	rs <- par[2]
-	um <- par[3]
-	us <- par[4]
+	rm <- par[1] # CRRA Mean
+	rs <- par[2] # CRRA Standard Deviation
+	um <- par[3] # Fechner Mean
+	us <- par[4] # Fechner Standard Deviation
+	rh <- par[5] # Rho Mean
 
 	# Fechner will use a gamma distribution, so need to back out shape and
 	# scale parameters
+
+	means <- c(rm,um)
+	sds   <- c(rs,us)
+
+	sigma <- mkcov(sds,rh)
+
+	dists <- MASS::mvrnorm(n=N, mu=means, Sigma=sigma)
+
+	p1 <- pnorm(dists[,1], mean=means[1], sd=sds[1])
+	p2 <- pnorm(dists[,2], mean=means[2], sd=sds[2])
+
+	pvals <- cbind(p1,p2)
+
 	k <- (um^2)/(us^2)
 	t <- (us^2)/um
+
+	r  <- qnorm(pvals[,1], mean=rm, sd=rs)
+	mu <- qgamma(pvals[,2], shape=k, scale=t)
 
 	d <- data.frame(c=rep(0, nrow(A)))
 
@@ -47,8 +92,8 @@ genEUT <- function(par, N, A, B, pA, pB, Min, Max){
 	e <- d
 	e$ID <- 1
 
-	rval <- rnorm(1,mean = rm, sd = rs) 
-	uval <- rgamma(1,shape = k, scale = t) 
+	rval <- r[1]
+	uval <- mu[1] 
 
 	while( is.na(rval) | is.infinite(rval)){
 		rval <- rnorm(1,mean = rm, sd = rs) 
@@ -67,8 +112,8 @@ genEUT <- function(par, N, A, B, pA, pB, Min, Max){
 		e$ID <- i
 		# grab one value from the distribution
 
-		rval <- rnorm(1,mean = rm, sd = rs) 
-		uval <- rgamma(1,shape = k, scale = t) 
+		rval <- r[i]
+		uval <- mu[i] 
 
 		while( is.na(rval) | is.infinite(rval)){
 			rval <- rnorm(1,mean = rm, sd = rs) 
