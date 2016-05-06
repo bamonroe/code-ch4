@@ -51,12 +51,6 @@ inlist <- function(y, par=1){
 	res
 }
 
-
-
-#load(data.files[6])
-#ALL <- RES
-#RM.dev <- lapply(ALL,inlist)
-
 plots <- list()
 
 for(i in 1:4){
@@ -69,13 +63,16 @@ for(i in 1:4){
 	RM.dev$Rho <- factor(RM.dev$Rho)
 
 	RM.dev <- RM.dev %>%
-						filter(!is.na(Dev)) %>%
-						filter( Dev < .5, Real > .1, Real < .5) %>%
-						#filter( Dev < .5, Real > -.5, Real < 1) %>%
-						filter( Est > .01)
+						filter(!is.na(Dev))
+
+	if(i == 1){
+		RM.dev <-	filter(RM.dev, Dev < .5, Real > -.5, Real < 1)
+	}else{
+		RM.dev <-	filter(RM.dev, Dev < .5, Real > .1, Real < .5, Est > .01) 
+	}
 
 	p <- ggplot(data=RM.dev, aes(x=Real, y=Dev ))
-#	p <- p + geom_point(aes(color=Rho))
+	p <- p + geom_point(aes(color=Rho))
 	p <- p + geom_smooth(method="lm",color="red")
 	p <- p + geom_smooth(method="loess",color="blue")
 
