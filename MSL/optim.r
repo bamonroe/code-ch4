@@ -119,7 +119,7 @@ do.optimx <- function(par, HR, HU, inst,
 
 	rownames(mm) <- c("rm","rs","um","us","rh")
 	# Print these things out
-	mesg <- paste0("Simnun: ",config$simnum," Init#: ",initnum)
+	mesg <- paste0("Simnum: ",config$simnum," Init#: ",initnum)
 	cat("\n")
 	cat(mesg)
 	cat("\n")
