@@ -1,13 +1,14 @@
 #Get rid of the bits
 rm(list=ls())
 gc()
+setwd("/home/woodape/thesis/code-ch4/MSL/")
 
 #Libraries
 library(ctools)
 c.library("halton","dplyr","Rcpp","optimx")
 
 # Compile the functions that are passed through to optim
-c.sourceCpp("../Rcpp/sim.cpp", on.main=F)
+c.sourceCpp("../Rcpp/MSL.cpp", on.main=F)
 
 # Source 'do.optim', the function which calls optim and parses the output
 # and load in/generate the dataset we want to estimate over
@@ -50,6 +51,7 @@ mapper <- function(genpars, N = 100, HH = 50, itype = "HL"){
 	choice <- as.vector(D$c)
 
 	SID <- as.vector(D$ID)
+	subjects <- max(D$ID)
 
 	sampars <- c(mean(D$r),sd(D$r),mean(D$mu),sd(D$mu), cor(D$r,D$mu))
 
@@ -83,22 +85,18 @@ mapper <- function(genpars, N = 100, HH = 50, itype = "HL"){
 	sim[2:4,] <- log(sim[2:4,]^3)	
 	sim[5,] <- log((-sim[5,] -1) / (sim[5,] -1))
 
-	htype <- "per.obs"		# Different value for each observation
-	htype <- "per.H"		# Different value for each H draw
-	htype <- "per.subject"  # Different value for each subject
-	subjects <- max(D$ID)
+	# Set the real values in a matrix
+	reals <- matrix(c(genpars,sampars), ncol=2, byrow=F )
+	colnames(reals) <- c("poppars","sampars")
 
-	HR <- matrix(hunif(HH*N ,prime = 13, burn=45 ), nrow = N, ncol = HH, byrow=F)
-	HU <- matrix(hunif(HH*N ,prime = 17, burn=45 ), nrow = N, ncol = HH, byrow=F)
-
-	config  <- list(method="BFGS", HH = HH, poppars=genpars, sampars=sampars, simnum=simnum)
-	config  <- list(method="Nelder-Mead", HH = HH, poppars=genpars, sampars=sampars, simnum=simnum)
+	config  <- list(method="BFGS",        HH=HH, reals=reals, simnum=simnum, is.SIM=TRUE)
+	config  <- list(method="Nelder-Mead", HH=HH, reals=reals, simnum=simnum, is.SIM=TRUE)
 
 	control <- list(trace=0, REPORT = 1, kkt = T, usenumDeriv = T, dowarn = F)
 
 	inst <- data.frame(cbind(A,pA,B,pB,Max,Min,choice,SID))
 
-	res <- lapply(sim, try.optimx, HR=HR, HU=HU, inst=inst, config=config, control=control)
+	res <- lapply(sim, try.optimx.MSL, HH, inst=inst, config=config, control=control)
 
 	return(res)
 

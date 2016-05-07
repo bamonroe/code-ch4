@@ -1,20 +1,25 @@
 
-try.optimx <- function(par, HR, HU, inst,
-					 config = list(method="Nelder-Mead", UH = "Unknown", HH = ncol(HR)), 
+try.optimx.MSL <- function(par, HH, inst,
+					 config = list(method="Nelder-Mead", is.SIM=FALSE), 
 					 control= list(trace=2, REPORT = 1, kkt = T, usenumDeriv = T, dowarn = F)){
 
-	tryCatch(do.optimx(par, HR, HU, inst, config, control),
+	tryCatch(do.optimx.MSL(par, HH, inst, config, control),
 			 error= function(x){paste0("Error with parameters ",par)}
 			 )
 
 }
 
-do.optimx <- function(par, HR, HU, inst,
-					 config = list(method="Nelder-Mead", UH = "Unknown", HH = ncol(HR)), 
+do.optimx.MSL <- function(par, HH, inst,
+					 config = list(method="Nelder-Mead", is.SIM=FALSE), 
 					 control= list(trace=2, REPORT = 1, kkt = T, usenumDeriv = T, dowarn = F)){
 
-	# Keep track of what initial par-set we're on
-	initnum <- par[6]
+	if(exists("is.SIM", where=config)){
+		if(config$is.SIM){
+			# Keep track of what initial par-set we're on
+			initnum <- par[6]
+		}
+	}
+
 	par <- par[1:5]
 
 	# Split the passed instrument into a list by subject ID
@@ -42,6 +47,13 @@ do.optimx <- function(par, HR, HU, inst,
 							list(A=A, B=B, pA=pA, pB=pB, Min=Min, Max=Max, choice=choice, SID=SID)
 					 
 					 })
+
+	# Number of Subjects
+	N <- length(perSID)
+
+	# Generate Halton Sequences
+	HR <- matrix(hunif(HH*N ,prime = 13, burn=45 ), nrow = N, ncol = HH, byrow=F)
+	HU <- matrix(hunif(HH*N ,prime = 17, burn=45 ), nrow = N, ncol = HH, byrow=F)
 
 	# Run the optimization
 	m <- optimx(par = par, fn = MSL_EUT, 
@@ -106,9 +118,9 @@ do.optimx <- function(par, HR, HU, inst,
 	start[5] <- (exp(par[5]) / ( 1 + exp(par[5]))) * 2 - 1
 
 	# Save everything in a convenient place
-	mm <- data.frame(poppar = config$poppar, sampar = config$sampar, init = start, est = spars, par = tt,
+	mm <- data.frame(init = start, est = spars, par = tt,
 					se = ts, lower = tl, upper = tu, pvalue = pval, llike = m$value, 
-					Subjects = length(perSID), Obs = nrow(inst), H = config$HH)
+					Subjects = N, Obs = nrow(inst), H = HH)
 
 	# Add in the hessian matrix
 	mm$hrm <- hrm
@@ -117,11 +129,23 @@ do.optimx <- function(par, HR, HU, inst,
 	mm$hus <- hus
 	mm$hrh <- hrh
 
+	# Cbind stuff if it exists
+	if(exists("reals",where=config)){
+		mm <- cbind(config$reals, mm)
+	}
+
 	rownames(mm) <- c("rm","rs","um","us","rh")
 	# Print these things out
-	mesg <- paste0("Simnum: ",config$simnum," Init#: ",initnum)
-	cat("\n")
-	cat(mesg)
+
+	if(exists("is.SIM", where=config)){
+		if(config$is.SIM){
+			# Keep track of what initial par-set we're on
+			mesg <- paste0("Simnum: ",config$simnum," Init#: ",initnum)
+			cat("\n")
+			cat(mesg)
+		}
+	}
+
 	cat("\n")
 	print(mm)
 	return(mm)
