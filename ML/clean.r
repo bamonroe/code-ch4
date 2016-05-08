@@ -1,5 +1,4 @@
 D <- tbl_df(D)
-
 D <- D %>%
 	rename(choice=decision, 
 				 ID = IDnum,
@@ -35,3 +34,46 @@ D$Min <- apply( cbind(pA,pB,A,B) ,1, context, Max = F )
 
 rm(list=c("A","B","pA","pB"))
 
+# Add in Demographics
+
+files <- list.files(path="../data/HNG/", pattern="demog", full.names=T)
+
+count <- 0
+
+demAll <- lapply(files,function(dd){
+
+	demog <- read.csv(dd)
+	demog$dID <- as.character(demog$client)
+	demog$dID <- substr(demog$dID, 12, stop=nchar(demog$dID))
+
+	if(dd==files[1]){
+		demog$dID <- as.integer(demog$dID) + 1000
+	}else{
+		demog$dID <- as.integer(demog$dID) + demog$ExptID*100 + 1000
+	}
+
+	demog
+				 
+})
+
+demAll <- do.call(rbind,demAll)
+demAll <- demAll[rep(seq_len(nrow(demAll)), 80),]
+demAll <- tbl_df(data.frame(demAll))
+demAll <- demAll %>%
+	arrange(dID)
+
+D <- arrange(D, ID)
+D <- cbind(D,demAll) 
+
+
+D$black <- ifelse(D$Ethnic==2 | D$Ethnic == 3, 1,0)
+D$asian <- ifelse(D$Ethnic==4 | D$Ethnic == 5, 1,0)
+D$white <- ifelse(D$Ethnic==1, 1, 0)
+D$family <- ifelse(D$Dependent > 2, 1, 0)
+D$working <- ifelse(D$Work == 1 | D$Work == 2, 1, 0)
+
+D$young <- ifelse(D$Age <= 24, 1, 0)
+D$old   <- ifelse(D$Age >  24, 1, 0)
+
+D <- D %>%
+	select(-dID, -Subject, -ExptID, -client)
