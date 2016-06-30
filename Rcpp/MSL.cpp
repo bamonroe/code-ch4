@@ -2,22 +2,36 @@
 // [[Rcpp::depends(RcppArmadillo)]]
 using namespace Rcpp;
 
-double crra(double x,double r){
-	return(pow(x,r) / r);
+// Function to add covariates
+NumericVector getPars(int csize, List covv, List covi, NumericVector fpar){
+
+	int pnum = 0;
+	double ii;
+
+	NumericVector index, var;
+	NumericVector par(csize);
+
+	for(int i = 0 ; i < csize ; i++){
+		par[i] = fpar[pnum];
+		if( covi[i] != R_NilValue){
+			index = covi[i];
+			for(int j=0; j < index.size(); j++){
+				pnum++;
+				ii = index[j];
+				var = covv[ii];
+				par[i] = par[i] + fpar[pnum] * var[0];
+			}
+		}
+		pnum++;
+	//	Rcout << pnum << std::endl;
+	
+	}
+
+	return(par);
+
 }
 
-// pow takes any base, but only up to double exponent, this function fixes that
-NumericVector vpow(const NumericVector base, const NumericVector exp) {
-  NumericVector out(base.size());
-  std::transform(base.begin(), base.end(),
-                 exp.begin(), out.begin(), ::pow);
-  return out;
-}
-
-NumericVector pw(NumericVector p , NumericVector a, NumericVector b){
-     return( exp(-b * vpow(-log(p), a)) );
-}
-
+// Functions needed for correlation
 arma::mat fillcorr(arma::vec rho){
 	int z = .5* ( sqrt(8*rho.n_elem + 1) + 1);
 	arma::mat RHO(z,z,arma::fill::eye);
@@ -70,6 +84,13 @@ NumericMatrix mvhnormInv( NumericMatrix HH, arma::vec mu, arma::mat sigma) {
 	return(OUT);
 
 }
+
+// Utility functions
+double crra(double x,double r){
+	return(pow(x,r) / r);
+}
+
+// Likelihood Functions
 
 // [[Rcpp::export]]
 double MSL_EUT(NumericVector par, NumericMatrix h1, NumericMatrix h2, List Inst){
@@ -224,200 +245,164 @@ double MSL_EUT(NumericVector par, NumericMatrix h1, NumericMatrix h2, List Inst)
 }
 
 // [[Rcpp::export]]
-double MSL_RDU(NumericVector par, NumericMatrix h1, NumericMatrix h2, NumericMatrix h3, NumericMatrix h4,
-					NumericVector A0, NumericVector A1, NumericVector B0, NumericVector B1,
-					NumericVector pA0, NumericVector pA1, NumericVector pB0, NumericVector pB1,
-					NumericVector max, NumericVector min, NumericVector c){
-    
+double MSL_EUT_cov(NumericVector par, List covars, List covindex, NumericMatrix h1, NumericMatrix h2, List Inst){
 
-	double rm = par[0];
-	double rs = exp(par[1]);
-	double um = exp(par[2]);
-	double us = exp(par[3]);
+	// dbug is only used with Rcout to keep trace down errors.
+	int dbug = 0;
 
-	double am = exp(par[4]);
-	double as = exp(par[5]);
+	NumericVector r;
+	NumericVector mu;
 
-	double bm = exp(par[6]);
-	double bs = exp(par[7]);
+	NumericVector ctx;
 
-	double uk = pow(um,2) / pow(us,2);
-	double ut = pow(us,2) / um;
+	NumericVector UB1;
+	NumericVector PA;
 
-	double ak = pow(am,2) / pow(as,2);
-	double at = pow(as,2) / am;
+	NumericVector N0;
+	NumericVector N1;
+	NumericVector Aprob;
+	NumericVector Bprob;
 
-	double bk = pow(bm,2) / pow(bs,2);
-	double bt = pow(bs,2) / bm;
-
-	int rnum = h1.nrow();
 	int h = h1.ncol();
+	double N = Inst.size();
 
-	NumericMatrix r(rnum,h);
-	NumericMatrix mu(rnum,h);
-	NumericMatrix alpha(rnum,h);
-	NumericMatrix beta(rnum,h);
+	NumericMatrix CH(h,2);
 
-	NumericVector wA1(rnum);
-	NumericVector wA0(rnum);
-	NumericVector wB1(rnum);
-	NumericVector wB0(rnum);
+	NumericVector subprob(N);
+	arma::rowvec simprob(h);
 
-	NumericVector ctx(rnum);
-	NumericVector UA(rnum);
-	NumericVector UB(rnum);
-	NumericVector UB1(rnum);
-	NumericVector PA(rnum);
+	// Loop through all subjects, this is necessary because we have correlation 
+	// between the r and mu variables.
+	
+	double ii;
+	NumericVector var;
 
-	NumericVector N0(rnum);
-	NumericVector N1(rnum);
-	NumericVector pA(rnum);
+	for(int n = 0; n < N; n++){
+		
+		// Here we make the "base" parameters linnear equations of the covariate
+		// coefficient and ONLY the first value of the covariate. To allow covariates
+		// to change within a subject's choices, we'd need another loop, which means
+		// a lot more function calls, and likely a fairly big decrease in speed.
+		int csize = covindex.size();
+		NumericVector basepar = getPars(csize, covars[n], covindex, par);
 
-	NumericMatrix sim(rnum,h);
+		double rm = basepar[0];
+		double rs = pow(exp(basepar[1]), (1.0/3.0));
+		double um = pow(exp(basepar[2]), (1.0/3.0));
+		double us = pow(exp(basepar[3]), (1.0/3.0));
 
-	for(int i = 0; i < h ; i++){
+		// Bound the correlations between -1,1
+		arma::vec rho = NumericVector::create(basepar[4]);
+		rho = exp(rho);
+		rho = (rho/(1 + rho))*2 - 1;
 
-		r(_,i)  = qnorm(h1(_,i),rm,rs);
-		mu(_,i) = qgamma(h2(_,i),uk,ut);
-		alpha(_,i) = qgamma(h3(_,i),ak,at);
-		beta (_,i) = qgamma(h4(_,i),bk,bt);
+		// Translate um and us to shape and scale parameters for gamma distribution
+		double k = pow(um,2) / pow(us,2);
+		double t = pow(us,2) / um;
 
-		wA1 = pw(pA1,alpha(_,i),beta(_,i));
-		wA0 = pw(pA0 + pA1,alpha(_,i),beta(_,i)) - pw(pA1,alpha(_,i),beta(_,i));
+		// Now we need to correlate the distributions
+		arma::vec means(2);
+		means(0) = rm;
+		means(1) = um;
+		NumericVector sd = NumericVector::create(rs, us);
 
-		wB1 = pw(pB1,alpha(_,i),beta(_,i));
-		wB0 = pw(pB0 + pB1,alpha(_,i),beta(_,i)) - pw(pB1,alpha(_,i),beta(_,i));
+		// How big is correlation matrix
+		int z = .5* ( sqrt(8*rho.n_elem + 1) + 1);
 
-		// Calculate the context
-		ctx = vpow(max,(1-r(_,i)))/(1-r(_,i)) - vpow(min,(1-r(_,i)))/(1-r(_,i));
+		arma::mat RHO = fillcorr(rho);
+		arma::mat sigma(z,z,arma::fill::eye);
 
-		// Calculate the utility of the lotteries
-		UA = (wA0 * vpow(A0,(1-r(_,i)))/(1-r(_,i))) + (wA1 * vpow(A1,(1-r(_,i)))/(1-r(_,i)));
-		UB = (wB0 * vpow(B0,(1-r(_,i)))/(1-r(_,i))) + (wB1 * vpow(B1,(1-r(_,i)))/(1-r(_,i)));
-
-		// Re-base utility of B and add in context and fechner
-		UB1  = (UB/ctx/mu(_,i)) - (UA/ctx/mu(_,i));
-
-		// If we have no issues, this is the choice probability of A
-		PA = (1 / (1 + exp(UB1)));
-
-		// Are we dealing with an insane number?
-		// yes
-		N0 = ifelse( UB > UA , 0 , 1 ); 
-		// no, but are we making an insane number via exp?
-		N1 = ifelse( UB1 > 709 , 0 , PA );
-
-		// Check for the 2 issues, and return the probability of A
-		pA = ifelse( is_na(UB1) , N0 , N1);
-
-		// Making pB = 1-pA saves us the exponential calculations - it's faster
-		//pB = 1 - pA;
-
-		// Grab the choice probability for the chosen option
-		sim(_,i) = ifelse(c==0,pA,(1-pA));
-
-	}
-
-	NumericVector sl(rnum);
-
-	for(int i = 0; i < rnum ; i++){
-		sl[i] = mean(sim(i,_));
-	}
-
-	sl = log(sl);
-	return(-sum(sl));
-
-}
-
-// [[Rcpp::export]]
-double MSL_EUT_LN(NumericVector par, NumericMatrix h1, NumericMatrix h2,
-					NumericMatrix A, NumericMatrix B,
-					NumericMatrix pA,NumericMatrix pB,
-					NumericVector max, NumericVector min, NumericVector c){
-    
-	double rm = par[0];
-	double rs = exp(par[1]);
-	double r_stretch = exp(par[2]);
-	double r_shift = par[3];
-
-	double um = par[4];
-	double us = exp(par[5]);
-	double mu_stretch = exp(par[6]);
-
-	int rnum = h1.nrow();
-	int h = h1.ncol();
-
-	int pnum = A.ncol();
-
-	NumericMatrix r(rnum,h);
-	NumericMatrix mu(rnum,h);
-
-	NumericVector ctx(rnum);
-	NumericVector UA(rnum);
-	NumericVector UB(rnum);
-	NumericVector UB1(rnum);
-	NumericVector PA(rnum);
-
-	NumericVector N0(rnum);
-	NumericVector N1(rnum);
-	NumericVector prA(rnum);
-
-	NumericMatrix sim(rnum,h);
-
-	for(int i = 0; i < h ; i++){
-
-		// Construct logit-normal distributions
-		r(_,i)  = exp(qnorm(h1(_,i),rm,rs));
-		mu(_,i) = exp(qnorm(h2(_,i),um,us));
-
-		r(_,i)  = r(_,i) / (1 + r(_,i));
-		mu(_,i) = mu(_,i) / (1 + mu(_,i));
-
-		r(_,i)  = r(_,i)*r_stretch + r_shift;
-		mu(_,i) = mu(_,i)*mu_stretch;
-
-		// Calculate the context
-		ctx = vpow(max,(1-r(_,i)))/(1-r(_,i)) - vpow(min,(1-r(_,i)))/(1-r(_,i));
-
-		// Calculate the utility of the lotteries
-		UA = (pA(_,0) * vpow(A(_,0),(1-r(_,i)))/(1-r(_,i))) ;
-		UB = (pB(_,0) * vpow(B(_,0),(1-r(_,i)))/(1-r(_,i))) ;
-
-		for(int j = 1; j < pnum ; j++ ){
-			UA = UA + (pA(_,j) * vpow(A(_,j),(1-r(_,i)))/(1-r(_,i))) ;
-			UB = UB + (pB(_,j) * vpow(B(_,j),(1-r(_,i)))/(1-r(_,i))) ;
+		// Fill out the covariance matrix
+		for(int row = 0; row < z ; row++){
+			for(int col = 0; col < z ; col++){
+				sigma(row,col) = sd[row] * sd[col] * RHO(row,col);
+			}
 		}
 
-		// Re-base utility of B and add in context and fechner
-		UB1  = (UB/ctx/mu(_,i)) - (UA/ctx/mu(_,i));
+		CH(_,0) = h1(n,_);
+		CH(_,1) = h2(n,_);
 
-		// If we have no issues, this is the choice probability of A
-		PA = (1 / (1 + exp(UB1)));
+		// Correlate our random uniform variables
+		CH = mvhnormInv(CH, means, sigma ) ;
+		
+		// Generate the real variables by inverting the uniform variables
+		r  = qnorm(CH(_,0),rm,rs);
+		r = 1.0 - r;
+		mu = qgamma(CH(_,1),k,t);
 
-		// Are we dealing with an insane number?
-		// yes
-		N0 = ifelse( UB > UA , 0 , 1 ); 
-		// no, but are we making an insane number via exp?
-		N1 = ifelse( UB1 > 709 , 0 , PA );
+		List inst = Inst[n];
 
-		// Check for the 2 issues, and return the probability of A
-		prA = ifelse( is_na(UB1) , N0 , N1);
+		NumericMatrix A      = inst["A"];
+		NumericMatrix B      = inst["B"];
+		NumericMatrix pA     = inst["pA"];
+		NumericMatrix pB     = inst["pB"];
+		NumericVector choice = inst["choice"];
+		NumericVector Max    = inst["Max"];
+		NumericVector Min    = inst["Min"];
 
-		// Making pB = 1-pA saves us the exponential calculations - it's faster
-		NumericVector pB = 1 - prA;
+		int rnum = A.nrow();
+		int cnum = A.ncol();
 
-		// Grab the choice probability for the chosen option
-		sim(_,i) = ifelse(c==0,prA,pB);
+		NumericVector UA(rnum);
+		NumericVector UB(rnum);
+
+		NumericMatrix sim(rnum, h);
+
+		double ri;
+		// Now loop through the halton draws and calculate
+		for(int i = 0; i < h ; i++){
+
+			ri = r[i];
+
+			// Calculate the context
+			ctx = (pow(Max, ri) / ri) - (pow(Min, ri) / ri);
+
+			// Calculate the utility of the lotteries
+			for(int j = 0; j < cnum; j++){
+				if (j == 0){
+					UA = (pA(_,j) * pow(A(_,j), ri) / ri);
+					UB = (pB(_,j) * pow(B(_,j), ri) / ri);
+				}
+				else{
+					UA = UA + (pA(_,j) * pow(A(_,j), ri) / ri);
+					UB = UB + (pB(_,j) * pow(B(_,j), ri) / ri);
+				}
+			}
+			
+			// Re-base utility of B and add in context and fechner
+			UB1  = (UB-UA)/ctx/mu[i];
+
+			// If we have no issues, this is the choice probability of A
+			PA = (1.0 / (1.0 + exp(UB1)));
+
+			// Are we dealing with an insane number?
+			// yes
+			N0 = ifelse( UB > UA , 0.0 , 1.0 ); 
+			// no, but are we making an insane number via exp?
+			N1 = ifelse( UB1 > 709.0, 0.0 , PA );
+
+			// Check for the 2 issues, and return the probability of A
+			Aprob = ifelse( is_na(PA) , N0 , N1);
+
+			// Making pB = 1-pA saves us the exponential calculations - it's faster
+			NumericVector Bprob = 1.0 - Aprob;
+
+			// Grab the choice probability for the chosen option
+			sim(_,i) = ifelse(choice==0, Aprob, Bprob);
+
+		}
+		
+		arma::mat simArma = Rcpp::as<arma::mat>(sim);
+
+		simprob = prod(simArma,0);
+
+		double spb = mean(simprob);
+
+		subprob[n] = spb;
 
 	}
 
-	NumericVector sl(rnum);
-
-	for(int i = 0; i < rnum ; i++){
-		sl[i] = mean(sim(i,_));
-	}
-
-	sl = log(sl);
+	NumericVector sl = log(subprob);
 	return(-sum(sl));
 
 }
