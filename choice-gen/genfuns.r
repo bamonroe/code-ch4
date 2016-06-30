@@ -2,7 +2,7 @@ CRRA <- function(x,r){
 	ifelse( r == 1, log(x),	(x^(1-r)) / (1-r) )
 }
 
-context <- function(x, Max){ 
+context <- function(x, Max){
 	# All Options need to have equal number of outcomes, and we're only handling binary lottery pairs here
 	# So the first half of the x vector will be probabilities and the second half outcomes.
 	onum <- length(x) / 2
@@ -40,7 +40,6 @@ mkcov <- function(sd,rho){
 	sigma
 
 }
-
 
 genEUT <- function(par, N, A, B, pA, pB, Min, Max){
 
@@ -162,7 +161,7 @@ genEUT <- function(par, N, A, B, pA, pB, Min, Max){
 	# This is a great R function, ifelse collapses would would otherwise
 	# potentially be several lines of code into a very readable one line
 	# statement.
-	D$c <- ifelse(Aprob > rand, 0, 1)
+	D$choice <- ifelse(Aprob > rand, 0, 1)
 
 	return(D)
 

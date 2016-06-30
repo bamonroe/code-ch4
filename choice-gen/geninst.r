@@ -1,7 +1,7 @@
-#Using the Holt Laury(2002) instrument
 
 source("../choice-gen/genfuns.r")
 
+#Using the Holt Laury(2002) instrument
 genHL <- function(par,N){
 
 	A0 <- rep(1.60, 10)
@@ -27,8 +27,8 @@ genHL <- function(par,N){
 
 }
 
+# Using Hey Orme(1994)
 genHO <- function(par,N){
-
 
 	A0 <- c(rep(1,10),rep(10,15))
 	A1 <- c(rep(20,10),rep(34,15))
@@ -58,6 +58,7 @@ genHO <- function(par,N){
 
 }
 
+# Using Harrison and Ng (2015)
 genHNG <- function(par,N){
 
 	pA0 <- c(0,0.15,0,0.15,0.15,0.6,0.6,0.9,0,0.1,0.5,0,0.5,0.4,0.4,0.9,0,0.1,0,0,0.7,0.7,0.6,0.75,0.1,0.2,0.4,0.1,0.5,0.6,0.4,0.8,0,0.1,0,0,0.5,0.55,0.5,0.7,0.03,0.18,0.27,0.12,0.06,0.54,0.18,0.84,0.08,0.2,0.1,0.08,0.65,0.65,0.48,0.83,0.08,0.38,0.38,0.02,0.62,0.66,0.52,0.81,0.08,0.25,0.35,0.18,0.53,0.55,0.48,0.78,0.08,0.22,0.2,0.02,0.48,0.45,0.54,0.65)
@@ -84,16 +85,7 @@ genHNG <- function(par,N){
 	Max <- apply( cbind(pA,pB,A,B) ,1, context, Max = T )
 	Min <- apply( cbind(pA,pB,A,B) ,1, context, Max = F )
 
-	#A  <- A[1:40,]
-	#B  <- B[1:40,]
-	#pA <- pA[1:40,]
-	#pB <- pB[1:40,]
-	#Min <-Min[1:40]
-	#Max <-Max[1:40]
-
 	genEUT(par=par, N=N, A=A, B=B, pA=pA, pB=pB, Min=Min, Max=Max)
 
 }
-
-
 
