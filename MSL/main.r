@@ -14,7 +14,7 @@ config  <- list(method="BFGS", itnmax = 1000)
 config  <- list(method="Nelder-Mead", itnmax = 1000)
 control <- list(trace=1, REPORT = 1, kkt = T, usenumDeriv = T, dowarn = F)
 
-HH <- 150
+HH <- 50
 
 # Demographics
 dempars      <- list()

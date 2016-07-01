@@ -148,22 +148,19 @@ opt.getResIndex <- function(dempars, pars){
 	parindex
 }
 
-opt.getResults <- function(m, dempars, pars, transforms){
+opt.getResults <- function(m, config, dempars, pars, transforms){
 
-	hess   <- attr(m, "details")[config$method, "nhatend"][[1]]
+	hess   <- attr(m, "details")[1, "nhatend"][[1]]
 	fisher <- solve(hess)
+
 	# If the hessian can't be solved (isn't positive semi-definite) ignore these results, they're not a real optimum
 	tryCatch(
 	if (is.na(hess) | is.null(hess) | is.na(fisher) | is.null(fisher)){
 		return(NULL)
 	} , warning = function(x){})
 
-
 	# get the index of the dems in the fullvars vector
 	pindex <- opt.getResIndex(dempars, pars)
-
-	# Create the matrix that is going to return our results.
-	mm <- matrix()
 
 	# Names
 	demused <- dempars %>%
@@ -198,9 +195,13 @@ opt.getResults <- function(m, dempars, pars, transforms){
 		tbase <- opt.transformPars(transforms[i], base)
 		fulltransformed <- c(fulltransformed, tbase)
 
-		# Standard errors
-		u95 <- opt.transformPars(transforms[i], base+(1.96 * fullse[pind[1]]))
-		l95 <- opt.transformPars(transforms[i], base-(1.96 * fullse[pind[1]]))
+		# 95% Confidence Interval
+		bconf <- 1.96 * fullse[pind[1]]
+		u95 <- opt.transformPars(transforms[i], base + bconf)
+		l95 <- opt.transformPars(transforms[i], base - bconf)
+
+		u95 <- u95 - tbase
+		l95 <- l95 - tbase
 
 		fullup95 <- c(fullup95, u95)
 		fulllo95 <- c(fulllo95, l95)
@@ -218,7 +219,6 @@ opt.getResults <- function(m, dempars, pars, transforms){
 			fullestimates <- c(fullestimates, dems)
 
 			change <-  base + dems
-			tbase   <- opt.transformPars(transforms[i], base)
 			tchange <- opt.transformPars(transforms[i], change)
 
 			tdems <- tchange - tbase
@@ -226,8 +226,9 @@ opt.getResults <- function(m, dempars, pars, transforms){
 			fulltransformed <- c(fulltransformed, tdems)
 
 			# Confidence Intervals
-			tup <- opt.transformPars(transforms[i], change + 1.96*fullse[pind[range]])
-			tlo <- opt.transformPars(transforms[i], change - 1.96*fullse[pind[range]])
+			dconf <- 1.96*fullse[pind[range]]
+			tup <- opt.transformPars(transforms[i], change + dconf)
+			tlo <- opt.transformPars(transforms[i], change - dconf)
 
 			u95 <- tup - tbase
 			l95 <- tlo - tbase
@@ -245,9 +246,14 @@ opt.getResults <- function(m, dempars, pars, transforms){
 	fulllo95 <- unlist(fulllo95)
 	start <- unlist(start)
 
+	# Create the matrix that is going to return our results.
 	mm <- data.frame(init = start, est = fullestimates, par = fulltransformed,
 									 se = fullse, lower = fulllo95, upper = fullup95, llike = m$value
 									 )
+
+	colnames(hess) <- fullnames
+
+	mm <- cbind(mm,hess)
 
 	rownames(mm) <- fullnames
 
@@ -306,7 +312,7 @@ do.optimx.MSL.EUT <- function(pars, inst, dempars = list(), HH = 100,
 						 method = config$method, hessian = T, control = control, itnmax = config$itnmax)
 
 	transforms <- c(0, 1, 1, 1, 2)
-	results <- opt.getResults(m, dempars, pars, transforms)
+	results <- opt.getResults(m, config, dempars, pars, transforms)
 	return(results)
 
 }
