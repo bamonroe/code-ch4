@@ -1,3 +1,6 @@
+library(dplyr)
+library(halton)
+library(optimx)
 ## Useful Functions
 
 # Function to split traditional "FULL-Long" datasets to per subject "Long" list
@@ -102,17 +105,16 @@ opt.getSolvedPars <- function(dempars, pars){
 	unlist(fullpars)
 }
 
-
 # Parameter transformation functions
 opt.exp3 <- function(x){
 	exp(x)^(1/3)
 }
+
 opt.m1to1 <- function(x){
 	(exp(x) / ( 1 + exp(x))) * 2 - 1
 }
 
 # Function to format results and do some tansformations
-
 opt.transformPars <- function(fun, param){
 
 	if( fun == 0 ){
@@ -262,7 +264,6 @@ opt.getResults <- function(m, config, dempars, pars, transforms){
 }
 
 # Optim Functions
-
 try.optimx.MSL <- function(pars, inst, dempars = list(), HH = 100, model = "EUT",
 					 config = list(method="Nelder-Mead"), 
 					 control= list(trace=2, REPORT = 1, kkt = T, usenumDeriv = T, dowarn = F)){
@@ -302,8 +303,8 @@ do.optimx.MSL.EUT <- function(pars, inst, dempars = list(), HH = 100,
 	N <- length(INST)
 
 	# Generate Halton Sequences
-	HR <- matrix(hunif(HH*N ,prime = 13, burn=45 ), nrow = N, ncol = HH, byrow=F)
-	HU <- matrix(hunif(HH*N ,prime = 17, burn=45 ), nrow = N, ncol = HH, byrow=F)
+	HR <- matrix(hunif(HH*N ,prime = 3, burn=45 ), nrow = N, ncol = HH, byrow=F)
+	HU <- matrix(hunif(HH*N ,prime = 7, burn=45 ), nrow = N, ncol = HH, byrow=F)
 
 	# Run the optimization
 	m <- optimx(par = fullpars, fn = MSL_EUT_cov, 
