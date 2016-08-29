@@ -41,7 +41,7 @@ mkcov <- function(sd,rho){
 
 }
 
-genEUT <- function(par, N, A, B, pA, pB, Min, Max){
+genEUT <- function(par, dempars, N, A, B, pA, pB, Min, Max){
 
 	rm <- par[1] # CRRA Mean
 	rs <- par[2] # CRRA Standard Deviation
