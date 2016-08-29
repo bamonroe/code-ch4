@@ -11,6 +11,10 @@ N <- 250
 # Generate a simulated instrument
 D <- genHL(sim, N)
 
+head(D, n = 10)
+
+stop()
+
 HH1 <- 50
 HH2 <- 150
 

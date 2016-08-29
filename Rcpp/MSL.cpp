@@ -23,7 +23,6 @@ NumericVector getPars(int csize, List covv, List covi, NumericVector fpar){
 			}
 		}
 		pnum++;
-	//	Rcout << pnum << std::endl;
 	
 	}
 
@@ -48,6 +47,9 @@ arma::mat fillcorr(arma::vec rho){
 
 }
 
+// Multivariate normal inversion.
+// Pass in unfiform distributed matrix, vector of means, and covaiance matirx, get back
+// correlated normal distirbuted matrix
 NumericMatrix mvhnormInv( NumericMatrix HH, arma::vec mu, arma::mat sigma) {
 
 	int h = HH.nrow();
@@ -56,6 +58,7 @@ NumericMatrix mvhnormInv( NumericMatrix HH, arma::vec mu, arma::mat sigma) {
 
 	NumericVector hcol;
 
+	// Generate Standard Normal Distributions
 	for(int i = 0; i < ncols ; i++){
 		hcol = qnorm(HH(_,i),0.0,1.0 );
 		Y.col(i) = Rcpp::as<arma::colvec>(hcol);
