@@ -1,61 +1,49 @@
 library(ctools)
-c.library("microbenchmark")
 
-c.source("../MSL/optim.r","../choice-gen/geninst.r")
-c.sourceCpp("../Rcpp/MSL.cpp")
+c.library("microbenchmark","MSL","cgen")
 
 # Define the sim population
 sim <- c(rm=.6, rs=.3, um=.15, us=.05, rh=.3)
-N <- 250
+N <- 100
+HH <- 50
 
 # Generate a simulated instrument
-D <- genHL(sim, N)
+D <- genChoice(sim, N, inst = "HL")
 
 head(D, n = 10)
 
+#s1 <- MSL.SLL.setup(pars = sim, inst = D, dempars = list(), HH = HH, model = "EUT", covar.version = "Choice" )
+#s2 <- MSL.SLL.setup(pars = sim, inst = D, dempars = list(), HH = HH, model = "EUT", covar.version = "Subject" )
+#s3 <- MSL.SLL.setup(pars = sim, inst = D, dempars = list(), HH = HH, model = "EUT", covar.version = "Fixed" )
+#
+#o1 <- EUT_COV_perChoice(s1[[1]], s1[[2]], s1[[3]], s1[[4]], s1[[5]], s1[[6]], s1[[7]])
+#o2 <- EUT_COV_perSub(s2[[1]], s2[[2]], s2[[3]], s2[[4]], s2[[5]], s2[[6]])
+#o3 <- EUT_COV_perSub_fixed(s3[[1]], s3[[2]], s3[[3]], s3[[4]], s3[[5]], s3[[6]], s3[[7]], s3[[8]])
+#
+#o1
+#o2
+#o3
+#
+#microbenchmark(
+##		EUT_COV_perChoice(s1[[1]], s1[[2]], s1[[3]], s1[[4]], s1[[5]], s1[[6]], s1[[7]]),
+#		EUT_COV_perSub(s2[[1]], s2[[2]], s2[[3]], s2[[4]], s2[[5]], s2[[6]]),
+#    EUT_COV_perSub_fixed(s3[[1]], s3[[2]], s3[[3]], s3[[4]], s3[[5]], s3[[6]], s3[[7]], s3[[8]]),
+#    times = 10
+#)
+
+config = list(method="BFGS", itnmax = 1000)
+control= list(trace=2, REPORT = 1, kkt = T, usenumDeriv = T, dowarn = F)
+
+m1 <- MSL.optim(pars = sim, inst = D, dempars=list(), HH=HH, model="EUT", covar.version = "Fixed" ,
+					try = F, config = config, control = control)
+
 stop()
 
-HH1 <- 50
-HH2 <- 150
-
-# Demographics
-dempars      <- list()
-
-pars      <- sim
-pars[2:4] <- log(sim[2:4]^3)	
-pars[5]   <- log((-sim[5] -1) / (sim[5] -1))
-
-# Split full-long dataset to list of per-subject long datsets
-INST     <- opt.getInst(D)
-
-# Fill in the elements of covariates not specified with NULL
-dempars  <- opt.getDemPars(dempars, pars)
-
-# Make a per-subject list containing covariates for each subject
-dempass  <- opt.getDemPass(dempars, D)
-
-# Get the column index of the covnames in covpass
-demindex <- opt.getDemIndex(dempars, dempass)
-
-# have all the initial values of the covariates go after the parameters
-fullpars <- opt.getFullPars(dempars, pars)
-
-# Split the covariates by ID and then turn them into a list
-dempass <- opt.splitDem(dempass)
-
-# Number of Subjects
-N <- length(INST)
-
-# Generate Halton Sequences
-HR1 <- matrix(hunif(HH1*N ,prime = 3, burn=45 ), nrow = N, ncol = HH1, byrow=F)
-HU1 <- matrix(hunif(HH1*N ,prime = 7, burn=45 ), nrow = N, ncol = HH1, byrow=F)
-
-HR2 <- matrix(hunif(HH2*N ,prime = 3, burn=45 ), nrow = N, ncol = HH2, byrow=F)
-HU2 <- matrix(hunif(HH2*N ,prime = 7, burn=45 ), nrow = N, ncol = HH2, byrow=F)
-
-# Run the optimization
 microbenchmark(
-	MSL_EUT_cov(fullpars, covars = dempass, covindex = demindex, h1 = HR1, h2 = HU1, Inst = INST),
-	MSL_EUT_cov(fullpars, covars = dempass, covindex = demindex, h1 = HR2, h2 = HU2, Inst = INST)
+m1 <- MSL.optim(pars = sim, inst = D, dempars=list(), HH=HH, model="EUT", covar.version = "Subject" ,
+					try = F, config = config, control = control),
+m2 <- MSL.optim(pars = sim, inst = D, dempars=list(), HH=HH, model="EUT", covar.version = "Fixed" ,
+					try = F, config = config, control = control),
+times=10
 )
 
