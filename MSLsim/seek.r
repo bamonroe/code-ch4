@@ -32,7 +32,7 @@ mapper <- function(genpars, N = 100, HH = 50, itype = "HL"){
 
 	sampars <- c(mean(D$r),sd(D$r),mean(D$mu),sd(D$mu), cor(D$r,D$mu))
 
-	# How many random places to initialize the optimizatio
+	# How many random places to initialize the optimization
 	init.num <- 1
 
 	rmr <- hunif(init.num, min = -.5, max = 1, prime = 3)
