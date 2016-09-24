@@ -11,9 +11,9 @@ rm <- hunif(NN, min = -0.50, max = 1.50)
 rs <- hunif(NN, min =  0.05, max = 1.50)
 um <- hunif(NN, min =  0.08, max = 0.80)
 us <- hunif(NN, min =  0.05, max = 0.50)
-rh <- hunif(NN, min = -0.67, max = 0.67)
+ru <- hunif(NN, min = -0.67, max = 0.67)
 
-SIM <- data.frame(rbind(rm, rs, um, us, rh))
+SIM <- data.frame(rbind(rm, rs, um, us, ru))
 SIM
 
 res <- c.lapply(SIM, runSimEUT)

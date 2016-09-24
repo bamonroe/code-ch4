@@ -25,10 +25,29 @@ runInd <- function(d, K) {
 	s.real <- c(d$r[1], d$mu[1])
 
 	# Be generous, start the optimizer at the real parameters
-	m <- tryCatch(ML.optim(pars = s.real, inst = d, pfunc = "EUT", optimizer = "BFGS", try = F, report = F), 
-					 error = function (x) NA)
+	n <- tryCatch(ML.optim(pars = s.real, inst = d, pfunc = "EUT", optimizer = "BFGS", try = F, report = F), 
+					 error = function(x) return(NA))
 
-	if (is.na(m[1])) return(NA)
+	rdu.real <- c(s.real[1], 1, s.real[2])
+	#o <- tryCatch(ML.optim(pars = rdu.real, inst = d, pfunc = "pow", optimizer = "BFGS", try = F, report = F), 
+	#				 error = function(x) return(NA))
+	o <- NA
+
+	if (is.na(n[1]) & is.na(o[1])) {
+		return(NA)
+	} else if (is.na(n[1])) {
+		m <- o
+		mod <- "pow"
+	} else if (is.na(o[1])) {
+		m <- n
+		mod <- "EUT"
+	} else if (n$likelihood > o$likelihood) {
+		m <- n
+		mod <- "EUT"
+	} else if (o$likelihood > n$likelihood) {
+		m <- o
+		mod <- "pow"
+	}
 
 	# Will need to transform the real parameters into what the likelihood function would see
 	r.par <- s.real
@@ -38,10 +57,10 @@ runInd <- function(d, K) {
 	rwel <- welCalc(inst = d, pars = r.par, pfunc = "EUT", boot = F)
 
 	# Point Estimates of Individual Estimation
-	indw <- welCalc(inst = d, pars = m$estimates, pfunc = "EUT", boot = F)
+	indw <- welCalc(inst = d, pars = m$estimates, pfunc = mod, boot = F)
 	# Bootstrap Estimates of Individual Estimation
-	bindw <- tryCatch(welCalc(inst = d, pars = m$estimates, hessian = m$hessian, pfunc = "EUT", boot = T),
-										error = function (x) NA )
+	bindw <- tryCatch(welCalc(inst = d, pars = m$estimates, hessian = m$hessian, pfunc = mod, boot = T),
+										error = function(x) return(NA))
 
 	# If we were able to bootstrap, lets bootstrap
 	if (!is.na(bindw[1])) indw <- bindw
@@ -56,11 +75,18 @@ runInd <- function(d, K) {
 
 	# Solve the hessian to get the covariance matrix of the estimators
 	# Point Estimates
-	simw <- welCalc.sim(inst = d, pars = K$estimates, pfunc = "EUT", boot = F)
+	simw <- tryCatch(welCalc.sim(inst = d, pars = K$estimates, pfunc = "EUT", boot = F),
+					 error = function(x) return(NA))
 	# Boot Estimates
-	welCalc.sim(inst = d, pars = K$estimates, hessian = K$hessian, pfunc = "EUT", boot = T)
+	#welCalc.sim(inst = d, pars = K$estimates, hessian = K$hessian, pfunc = "EUT", boot = T)
 
-	if (is.na(indw[1]) | is.na(simw[1])) return(NA)
+	if (is.na(indw[1]) & is.na(simw[1])) {
+		return(NA)
+	} else if (is.na(indw[1])) {
+		return(1)
+	} else if (is.na(simw[1])) {
+		return(0)
+	}
 
 	idiff <- abs(rwel - indw)
 	sdiff <- abs(rwel - simw)
@@ -78,14 +104,18 @@ runInd <- function(d, K) {
 runSimEUT <- function(sim.eut) {
 
 	N <- 200
-	H <- 250
-	iter <- 1000
+	H <- 350
+	iter <- 100
 	control <- list()
 
 	names(sim.eut) <- c("rm", "rs", "um", "us", "ru")
 
 	D <- genChoice(sim.eut, N, inst="HNG", pfunc = "EUT")
-	K <- MSL.optim(pars = sim.eut, inst = D, pfunc = "EUT",  HH = H, optimizer = "BFGS", iterations = iter, try = F, control = control)
+
+	K <- tryCatch(MSL.optim(pars = sim.eut, inst = D, pfunc = "EUT",  HH = H, optimizer = "BFGS", iterations = iter, try = F, control = control),
+				  error = function(x) return(NA))
+
+	if (is.na(K[1])) return(NULL)
 	#save(D, K, file="optimres.Rda")
 	#load("optimres.Rda")
 
@@ -94,6 +124,8 @@ runSimEUT <- function(sim.eut) {
 	sim_ind <- lapply(perSID, runInd, K = K)
 
 	avg <- mean(unlist(sim_ind), na.rm = T)
+
+	print(avg)
 
 	return(avg)
 
