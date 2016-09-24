@@ -5,6 +5,7 @@ c.source("perSim.R")
 
 # Set runs to be a multiple of the number of cores available
 NN <- c.cores()
+#NN <- 1
 
 rm <- hunif(NN, min = -0.50, max = 1.50)
 rs <- hunif(NN, min =  0.05, max = 1.50)
@@ -16,6 +17,8 @@ SIM <- data.frame(rbind(rm, rs, um, us, rh))
 SIM
 
 res <- c.lapply(SIM, runSimEUT)
+
+print(warnings())
 
 res
 

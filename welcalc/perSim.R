@@ -18,11 +18,17 @@ it <- function(pars, transforms) {
 
 runInd <- function(d, K) {
 
+#	dbug <- 1
+#	print(paste("Here:", dbug)) ; dbug <- dbug + 1
+
 	# What are the real EUT parameters
 	s.real <- c(d$r[1], d$mu[1])
 
 	# Be generous, start the optimizer at the real parameters
-	m <- ML.optim(pars = s.real, inst = d, pfunc = "EUT", optimizer = "BFGS", try = F, report = F)
+	m <- tryCatch(ML.optim(pars = s.real, inst = d, pfunc = "EUT", optimizer = "BFGS", try = F, report = F), 
+					 error = function (x) NA)
+
+	if (is.na(m[1])) return(NA)
 
 	# Will need to transform the real parameters into what the likelihood function would see
 	r.par <- s.real
@@ -34,8 +40,11 @@ runInd <- function(d, K) {
 	# Point Estimates of Individual Estimation
 	indw <- welCalc(inst = d, pars = m$estimates, pfunc = "EUT", boot = F)
 	# Bootstrap Estimates of Individual Estimation
-	bindw <- welCalc(inst = d, pars = m$estimates, hessian = m$hessian, pfunc = "EUT", boot = T)
+	bindw <- tryCatch(welCalc(inst = d, pars = m$estimates, hessian = m$hessian, pfunc = "EUT", boot = T),
+										error = function (x) NA )
 
+	# If we were able to bootstrap, lets bootstrap
+	if (!is.na(bindw[1])) indw <- bindw
 
 #	# Get the transformed populaiton level parameters
 #	transforms.eut <- c(0,1,1,1,2)
@@ -50,6 +59,8 @@ runInd <- function(d, K) {
 	simw <- welCalc.sim(inst = d, pars = K$estimates, pfunc = "EUT", boot = F)
 	# Boot Estimates
 	welCalc.sim(inst = d, pars = K$estimates, hessian = K$hessian, pfunc = "EUT", boot = T)
+
+	if (is.na(indw[1]) | is.na(simw[1])) return(NA)
 
 	idiff <- abs(rwel - indw)
 	sdiff <- abs(rwel - simw)
@@ -74,13 +85,16 @@ runSimEUT <- function(sim.eut) {
 	names(sim.eut) <- c("rm", "rs", "um", "us", "ru")
 
 	D <- genChoice(sim.eut, N, inst="HNG", pfunc = "EUT")
-
-	K  <- MSL.optim(pars = sim.eut, inst = D, pfunc = "EUT",  HH = H, optimizer = "BFGS", iterations = iter, try = F, control = control)
+	K <- MSL.optim(pars = sim.eut, inst = D, pfunc = "EUT",  HH = H, optimizer = "BFGS", iterations = iter, try = F, control = control)
+	#save(D, K, file="optimres.Rda")
+	#load("optimres.Rda")
 
 	perSID <- split(x=D, f=D$ID)
 
 	sim_ind <- lapply(perSID, runInd, K = K)
 
-	return(mean(sim_ind))
+	avg <- mean(unlist(sim_ind), na.rm = T)
+
+	return(avg)
 
 }
