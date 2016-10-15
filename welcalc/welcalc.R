@@ -7,56 +7,41 @@ c.source("perSim.R")
 NN <- c.cores() - 1
 #NN <- 1
 
-#rm <- hunif(NN, min = -0.50, max = 1.50)
-#rs <- hunif(NN, min =  0.05, max = 1.50)
-#um <- hunif(NN, min =  0.08, max = 0.80)
-#us <- hunif(NN, min =  0.05, max = 0.50)
-#ru <- hunif(NN, min = -0.67, max = 0.67)
-#
-#SIM <- data.frame(rbind(rm, rs, um, us, ru))
-#SIM
-#
-#
-#c.lapply(1:NN, function(i){
-#
-#	sim.eut <- SIM[,i]
-#	N <- 200
-#	H <- 150
-#	iter <- 50
-#	control <- list()
-#	D <- genChoice(sim.eut, N, inst="HNG", pfunc = "EUT")
-#	K <- MSL.optim(pars = sim.eut, inst = D, pfunc = "EUT",  optimizer = "BFGS", try = F)
-#	save(K, D, file=paste0("MSL",i,".Rda"))
-#
-#})
-#
-#stop()
+rm <- hunif(NN, min = -0.50, max = 1.50)
+rs <- hunif(NN, min =  0.05, max = 1.50)
+um <- hunif(NN, min =  0.08, max = 0.80)
+us <- hunif(NN, min =  0.05, max = 0.50)
+ru <- hunif(NN, min = -0.67, max = 0.67)
+
+SIM <- data.frame(rbind(rm, rs, um, us, ru))
+SIM
 
 #runSimEUT <- function(sim.eut) {
 runSimEUT <- function(i) {
 
-	load(file=paste0("MSL",i,".Rda"))
-	sim.eut <- c(rm = mean(D$r), rs = sd(D$r), um = mean(D$mu), us = sd(D$r), ru = cor(D$r, D$mu))
+	sim.eut <- SIM[,i]
+	N <- 200
+	H <- 150
+	iter <- 50
+	control <- list()
 
-#	N <- 200
-#	H <- 150
-#	iter <- 50
-#	control <- list()
-#
-#	names(sim.eut) <- c("rm", "rs", "um", "us", "ru")
-#
-#	D <- genChoice(sim.eut, N, inst="HNG", pfunc = "EUT")
+#	load(file=paste0("MSL",i,".Rda"))
+#	sim.eut <- c(rm = mean(D$r), rs = sd(D$r), um = mean(D$mu), us = sd(D$r), ru = cor(D$r, D$mu))
+
+	names(sim.eut) <- c("rm", "rs", "um", "us", "ru")
+
+	D <- genChoice(sim.eut, N, inst="HNG", pfunc = "EUT")
 	# Clean up the D
 	D <- ML.clean(D)
-#
-#	K <- tryCatch(MSL.optim(pars = sim.eut, inst = D, pfunc = "EUT",  HH = H, optimizer = "BFGS", iterations = iter, try = F, control = control),
-#				  error = function(x) return(NA))
 
+	# I don't have much of an issue starting on the real values.
+	K <- tryCatch(MSL.optim(pars = sim.eut, inst = D, pfunc = "EUT",  HH = H, optimizer = "BFGS", iterations = iter, try = F, control = control),
+				  error = function(x) return(NA))
 
+	save(K, D, file=paste0("MSL",i,".Rda"))
 
+	# If MSL failed all is lost
 	if (is.na(K[1])) return(NULL)
-	#save(D, K, file="optimres.Rda")
-	#load("optimres.Rda")
 
 	perSID <- split(x=D, f=D$ID)
 
@@ -90,9 +75,7 @@ runSimEUT <- function(i) {
 
 }
 
-res <- lapply(1:NN, runSimEUT)
-
-
+res <- c.lapply(1:NN, runSimEUT)
 
 res
 

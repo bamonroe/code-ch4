@@ -53,13 +53,13 @@ runInd <- function(d, K) {
 		est <- pow$estimates
 		sd <- sqrt(diag(solve(-pow$hessian)))
 		POW.test <- abs((est[2] - 1)/sd[2]) > 2
-	} 
+	}
 
 	if (!is.na(invs[1])) {
 		est <- invs$estimates
 		sd <- sqrt(diag(solve(-invs$hessian)))
 		INVS.test <- abs((est[2] - 1)/sd[2]) > 2
-	} 
+	}
 
 	if (!is.na(prelec[1])) {
 		est <- prelec$estimates
@@ -67,7 +67,7 @@ runInd <- function(d, K) {
 		PRELEC0.test <- abs((est[2] - 1)/sd[2]) > 2
 		PRELEC1.test <- abs((est[3] - 1)/sd[3]) > 2
 		PRELEC.test <- PRELEC0.test | PRELEC1.test
-	} 
+	}
 
 	# If the RDU model doesn't have converging SE, then the test is false
 	if (is.na(POW.test)) RDU.test <- F
