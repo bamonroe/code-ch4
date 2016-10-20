@@ -1,21 +1,3 @@
-
-exp3      <- function(x) {exp(x)^(1/3)}
-exp3.inv  <- function(y) {log(y^3)}
-m1to1     <- function(x) {(exp(x) / (1+exp(x))) * 2 - 1}
-m1to1.inv <- function(y) {log(-(y+1) / (y-1))}
-
-ot <- function(pars, transforms) {
-	ifelse(transforms == 1, exp3(pars),
-	ifelse(transforms == 2, m1to1(pars),
-				 pars))
-}
-
-it <- function(pars, transforms) {
-	ifelse(transforms == 1, exp3.inv(pars),
-	ifelse(transforms == 2, m1to1.inv(pars),
-				 pars))
-}
-
 runInd <- function(d, K) {
 
 #	dbug <- 1
