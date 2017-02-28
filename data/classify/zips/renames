@@ -1,0 +1,67 @@
+#!/bin/bash
+
+bnum="$1"
+if [ -z "$bnum" ] ; then
+	echo "need a batch number as first argument"
+	exit 0
+fi
+
+mkdir est2
+mkdir raw2
+mkdir res2
+mkdir log2
+
+anum=$(ls -l all* | wc -l)
+
+for all in all*7z ; do
+	7z x "$all"
+	cd estimates
+	for est in *.Rda ; do
+		ext=${est##*-}
+		base=${est%%-*}
+		nest="${base}-$bnum.$ext"
+		mv "$est" "$nest"
+	done
+	mv *.Rda ../est2/
+	cd ..
+	cd rawdat
+	for est in *.Rda ; do
+		nest=${est/.Rda/}
+		ext=${est##*-}
+		base=${est%%-*}
+		nest="${base}-$bnum.$ext"
+		mv "$est" "$nest"
+	done
+	mv *.Rda ../raw2/
+	cd ..
+	cd results
+	for est in *.Rda ; do
+		nest=${est/.Rda/}
+		ext=${est##*-}
+		base=${est%%-*}
+		nest="${base}-$bnum.$ext"
+		mv "$est" "$nest"
+	done
+	mv *.Rda ../est2/
+	cd ..
+	cd logs
+	for est in *.Rout ; do
+		nest=${est/.Rout/}
+		ext=${est##*-}
+		base=${est%%-*}
+		nest="${base}-$bnum.$ext"
+		mv "$est" "$nest"
+	done
+	#mv *.Rout ../log2/
+	cd ..
+done
+
+rm -r estimates
+rm -r rawdat
+rm -r results
+rm -r logs
+
+mv est2 estimates
+mv raw2 rawdat
+mv res2 results
+mv log2 logs
