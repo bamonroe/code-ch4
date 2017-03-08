@@ -384,7 +384,7 @@ if (p.eut) {
 		print(paste0("Number of subjects in EUT Win: ",nrow(HNG)))
 		p <- plotme(HNG, "EUT", "r", sfrac = win_frac)
 		print("saving plot")
-		ggsave(paste0("eut-winners.", dev.type), plot = p, device = dev.type, path = path, width = width, height = height, units = units)
+		ggsave(paste0("../plots/eut-winners.", dev.type), plot = p, device = dev.type, path = path, width = width, height = height, units = units)
 		rm(HNG, p)
 	}
 	if (p.wel) {
@@ -397,7 +397,7 @@ if (p.eut) {
 		print(paste0("Number of subjects in EUT Welfare: ",nrow(HNG)))
 		p <- plot.wel(HNG, "EUT", "r", sfrac = wel_frac, wel.var)
 		print("saving plot")
-		ggsave(paste0("eut-welfare.", dev.type), plot = p, device = dev.type, path = path, width = width, height = height, units = units)
+		ggsave(paste0("../plots/eut-welfare.", dev.type), plot = p, device = dev.type, path = path, width = width, height = height, units = units)
 		rm(HNG, p)
 	}
 }
@@ -414,7 +414,7 @@ if (p.pow) {
 		print(paste0("Number of subjects in POW Win: ",nrow(HNG)))
 		p <- plotme(HNG, "POW", "alpha", win_frac)
 		print("saving plot")
-		ggsave(paste0("pow-winners.", dev.type), plot = p, device = dev.type, path = path, width = width, height = height, units = units)
+		ggsave(paste0("../plots/pow-winners.", dev.type), plot = p, device = dev.type, path = path, width = width, height = height, units = units)
 		rm(HNG, p)
 	}
 	if (p.wel) {
@@ -427,7 +427,7 @@ if (p.pow) {
 		print(paste0("Number of subjects in POW Welfare: ",nrow(HNG)))
 		p <- plot.wel(HNG, "POW", "alpha", wel_frac, wel.var)
 		print("saving plot")
-		ggsave(paste0("pow-welfare.", dev.type), plot = p, device = dev.type, path = path, width = width, height = height, units = units)
+		ggsave(paste0("../plots/pow-welfare.", dev.type), plot = p, device = dev.type, path = path, width = width, height = height, units = units)
 		rm(HNG, p)
 	}
 }
@@ -445,7 +445,7 @@ if (p.inv) {
 		print(paste0("Number of subjects in INV Win: ",nrow(HNG)))
 		p <- plotme(HNG, "Inverse S", "alpha", win_frac)
 		print("saving plot")
-		ggsave(paste0("inv-winners.", dev.type), plot = p, device = dev.type, path = path, width = width, height = height, units = units)
+		ggsave(paste0("../plots/inv-winners.", dev.type), plot = p, device = dev.type, path = path, width = width, height = height, units = units)
 		rm(HNG, p)
 	}
 	if (p.wel) {
@@ -459,7 +459,7 @@ if (p.inv) {
 		print(paste0("Number of subjects in INV Wel: ",nrow(HNG)))
 		p <- plot.wel(HNG, "Inverse S", "alpha", wel_frac, wel.var)
 		print("saving plot")
-		ggsave(paste0("inv-welfare.", dev.type), plot = p, device = dev.type, path = path, width = width, height = height, units = units)
+		ggsave(paste0("../plots/inv-welfare.", dev.type), plot = p, device = dev.type, path = path, width = width, height = height, units = units)
 		rm(HNG, p)
 	}
 }
@@ -476,12 +476,12 @@ if (p.pre) {
 		print(paste0("Number of subjects in PRE Win: ",nrow(HNG)))
 		p <- plotme(HNG, "Prelec",    "alpha", win_frac)
 		print("saving plot")
-		ggsave(paste0("pre-a-winners.", dev.type), plot = p, device = dev.type, path = path, width = width, height = height, units = units)
+		ggsave(paste0("../plots/pre-a-winners.", dev.type), plot = p, device = dev.type, path = path, width = width, height = height, units = units)
 		rm(p)
 		print("Beginning with Prelec winner beta")
 		p <- plotme(HNG, "Prelec",    "beta", win_frac)
 		print("saving plot")
-		ggsave(paste0("pre-b-winners.", dev.type), plot = p, device = dev.type, path = path, width = width, height = height, units = units)
+		ggsave(paste0("../plots/pre-b-winners.", dev.type), plot = p, device = dev.type, path = path, width = width, height = height, units = units)
 		rm(HNG, p)
 	}
 	if (p.wel) {
@@ -495,12 +495,12 @@ if (p.pre) {
 		print("Beginning with Prelec welfare alpha")
 		p <- plot.wel(HNG, "Prelec",    "alpha", wel_frac, wel.var)
 		print("saving plot")
-		ggsave(paste0("pre-a-welfare.", dev.type), plot = p, device = dev.type, path = path, width = width, height = height, units = units)
+		ggsave(paste0("../plots/pre-a-welfare.", dev.type), plot = p, device = dev.type, path = path, width = width, height = height, units = units)
 		rm(p)
 		print("Beginning with Prelec welfare beta")
 		p <- plot.wel(HNG, "Prelec",    "beta", wel_frac, wel.var)
 		print("saving plot")
-		ggsave(paste0("pre-b-welfare.", dev.type), plot = p, device = dev.type, path = path, width = width, height = height, units = units)
+		ggsave(paste0("../plots/pre-b-welfare.", dev.type), plot = p, device = dev.type, path = path, width = width, height = height, units = units)
 		rm(HNG, p)
 	}
 }
@@ -517,7 +517,7 @@ print(paste0("Number of subjects in results: ",nrow(HNG)))
 
 p <- allmu(HNG, win_frac)
 		print("saving plot")
-ggsave(paste0("mu-winners.", dev.type), plot = p, device = dev.type, path = path, width = width, height = height, units = units)
+ggsave(paste0("../plots/mu-winners.", dev.type), plot = p, device = dev.type, path = path, width = width, height = height, units = units)
 rm(HNG, p)
 }
 
@@ -534,6 +534,6 @@ print(paste0("Number of subjects in results: ",nrow(results)))
 
 p <- correct(results)
 		print("saving plot")
-ggsave(paste0("correct-winners.", dev.type), plot = p, device = dev.type, path = path, width = width, height = height, units = units)
+ggsave(paste0("../plots/correct-winners.", dev.type), plot = p, device = dev.type, path = path, width = width, height = height, units = units)
 rm(HNG, p)
 }
