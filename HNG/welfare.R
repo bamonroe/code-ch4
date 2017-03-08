@@ -1,8 +1,14 @@
 library(ctools)
 c.library("MSL", "welfare", "dplyr", "ggplot2")
 
-load("HNG_est.Rda")
-load("../data/HNG/HNG.Rda")
+do.choice  <- T
+do.sub     <- T
+do.pval    <- T
+
+hng_dir <- "../data/HNG/"
+hng_res_dir <- "../data/HNG_res/"
+load(paste0(hng_res_dir, "filtered.Rda"))
+load(paste0(hng_res_dir, "HNG.Rda"))
 
 HNG <- DAT %>%
 	filter(Inst == "HNG")
@@ -13,7 +19,10 @@ INS <- DAT %>%
 # Split the data by subject
 ins.dat <- split(INS, INS$ID)
 
+dat <- c()
+
 # Go through each subject
+if (do.choice) {
 per.choice <- c.lapply(1:length(ins.dat), function (i) {
 
 	# Get each subject's data, and estimates
@@ -32,7 +41,7 @@ per.choice <- c.lapply(1:length(ins.dat), function (i) {
 			nomat <- matrix(NA, nrow = 24, ncol = 9)
 			colnames(nomat) <- c("WelSurplus", "WelMax", "WelMaxDiff", "WelEfficiency", "WellEfficiency2", "CEchoice", "CEuchoice", "CEmax", "Prob")
 			return(nomat)
-		} 
+		}
 
 		# split data by question ID
 		cdat <- split(dat, dat$QID)
@@ -57,114 +66,88 @@ per.choice <- c.lapply(1:length(ins.dat), function (i) {
 	return(sub.wel)
 
 })
-#
-#per.sub <- c.lapply(1:length(ins.dat), function (i) {
-#
-#	# Get each subject's data, and estimates
-#	dat <- ins.dat[[i]]
-#	est <- sub.est[[i]]
-#	win <- sub.df$win_05[i]
-#	enames <- names(est)
-#
-#	if (is.na(win)) return(rep(NA, 9))
-#	# Loop through each model for each subject
-#	sub.wel <- lapply(enames, function(en) {
-#		e <- est[[en]]
-#		# If this model isn't the winner
-#		if (en != win)   return("nowin")
-#		if (is.na(e[1])) {
-#			nomat <- matrix(NA, nrow = 1, ncol = 9)
-#			colnames(nomat) <- c("WelSurplus", "WelMax", "WelMaxDiff", "WelEfficiency", "WellEfficiency2", "CEchoice", "CEuchoice", "CEmax", "Prob")
-#			return(nomat)
-#		} 
-#		ww <- welCalc(e, dat, boot = T, H = 500)
-#		return(ww)
-#	})
-#
-#	names(sub.wel) <- enames
-#	sub.wel <- sub.wel[[win]]
-#
-#	return(sub.wel)
-#})
-#
-#per.sub2 <- c.lapply(1:length(ins.dat), function (i) {
-#
-#	# Get each subject's data, and estimates
-#	dat <- ins.dat[[i]]
-#	est <- sub.est[[i]]
-#	win <- sub.df$win_05[i]
-#	enames <- names(est)
-#
-#	if (is.na(win)) return(rep(NA, 9))
-#	# Loop through each model for each subject
-#	sub.wel <- lapply(enames, function(en) {
-#		e <- est[[en]]
-#		# If this model isn't the winner
-#		if (en != win)   return("nowin")
-#		if (is.na(e[1])) {
-#			nomat <- matrix(NA, nrow = 24, ncol = 9)
-#			colnames(nomat) <- c("WelSurplus", "WelMax", "WelMaxDiff", "WelEfficiency", "WellEfficiency2", "CEchoice", "CEuchoice", "CEmax", "Prob")
-#			return(nomat)
-#		} 
-#
-#		# split data by question ID
-#		cdat <- split(dat, dat$QID)
-#
-#		# loop through each choice
-#		ww <- lapply(cdat, function(d) {
-#			# If the model is NA, skip it
-#			if (is.na(e[1])) return(rep(NA, 9))
-#			# Estimate each choice at each subject's estimates
-#			welCalc(e, d, boot = T, H = 500)
-#		})
-#
-#		ww <- do.call(rbind, ww)
-#		ww <- colSums(ww) / 24
-#
-#		return(ww)
-#	})
-#
-#	names(sub.wel) <- enames
-#
-#	sub.wel <- sub.wel[[win]]
-#
-#	return(sub.wel)
-#
-#})
-#
-
 per.choice <- do.call(rbind, per.choice)
 per.choice <- data.frame(per.choice)
 
 per.choice <- per.choice[which(!is.na(per.choice[,1])), ]
 
-p <- ggplot(per.choice)
-p <- p + geom_vline(xintercept = 0, color = "red")
-p <- p + geom_density(aes(WelSurplus), color = "blue")
-p <- p + labs(title = paste0("N = ", nrow(per.choice), ", Mean = ", round(mean(per.choice$WelSurplus), digits = 2), ", Actual decisions made"), x = "Consumer Surplus ($)", y = "Density")
+dat <- c("per.choice")
 
-ggsave(filename = "HNG_CS.pdf", plot = p, device = "pdf")
+}
 
-p
+if (do.sub) {
+per.sub <- c.lapply(1:length(ins.dat), function (i) {
 
-#per.sub     <- do.call(rbind, per.sub)
-#per.sub     <- data.frame(per.sub)
-#per.sub     <- per.sub[which(!is.na(per.sub[,1])), ]
-#per.sub$Eff <- per.sub$WelSurplus / per.sub$WelMax
-#per.sub$we2 <- (per.sub$CEchoice - per.sub$CEuchoice) / per.sub$CEmax
-#
-#per.sub2     <- do.call(rbind, per.sub2)
-#per.sub2     <- data.frame(per.sub2)
-#per.sub2     <- per.sub2[which(!is.na(per.sub2[,1])), ]
-#per.sub2$Eff <- per.sub2$WelSurplus / per.sub2$WelMax
-#per.sub2$we2 <- (per.sub2$CEchoice - per.sub2$CEuchoice) / per.sub2$CEmax
-#
-#
-#p0 <- ggplot(per.sub2)
-#q <- p0 + geom_density(aes(we2), color = "blue", bw = 0.05)
-#q <- q + labs(title = "Actual decisions made", x = "Welfare Efficiency (%)", y = "Density")
-#
-#r <- p0 + geom_density(aes(WelEfficiency2), color = "blue", bw = 0.01)
-#r <- r  + labs(title = "Actual decisions made", x = "Welfare Efficiency (%)", y = "Density")
-#
-#r
+	# Get each subject's data, and estimates
+	dat    <- ins.dat[[i]]
+	est    <- sub.est[[i]]
+	win    <- sub.df$win_05[i]
+	enames <- names(est)
+
+	if (is.na(win)) return(rep(NA, 9))
+	# Loop through each model for each subject
+	sub.wel <- lapply(enames, function(en) {
+		e <- est[[en]]
+		# If this model isn't the winner
+		if (en != win)   return("nowin")
+		if (is.na(e[1])) {
+			nomat <- matrix(NA, nrow = 24, ncol = 9)
+			colnames(nomat) <- c("WelSurplus", "WelMax", "WelMaxDiff", "WelEfficiency", "WellEfficiency2", "CEchoice", "CEuchoice", "CEmax", "Prob")
+			return(nomat)
+		}
+
+		# Estimate each choice at each subject's estimates
+		ww <- welCalc(e, dat, boot = T, H = 500)
+
+		return(ww)
+	})
+
+	names(sub.wel) <- enames
+
+	sub.wel <- sub.wel[[win]]
+
+	return(sub.wel)
+
+})
+per.sub <- do.call(rbind, per.sub)
+per.sub <- data.frame(per.sub)
+
+per.sub <- per.sub[which(!is.na(per.sub[,1])), ]
+
+dat <- c("per.sub")
+
+}
+
+if (do.pval) {
+pvals <- lapply(1:length(ins.dat), function (i) {
+	# Get each subject's data, and estimates
+	win.rdu  <- sub.df$RDU_win_05[i]
+	win.full <- sub.df$win_05[i]
+
+	if (is.na(win.rdu)) {
+		out <- data.frame(WinnerRDU = NA, pvals = NA)
+	} else {
+		pval <- sub.df[[paste0(win.rdu,"_pval")]][i]
+		out  <- data.frame(WinnerRDU = win.rdu, pvals = pval)
+	}
+
+	if (is.na(win.full)) {
+		out$Winner <- NA
+		out$pfull  <- NA
+	} else {
+		pval.full <- sub.df[[paste0(win.full,"_pval")]][i]
+		out$Winner <- win.full
+		out$pfull  <- win.full
+	}
+
+	return(out)
+
+})
+pvals <- do.call(rbind, pvals)
+#pvals <- data.frame(pvals)
+#colnames(pvals) <- c("Winner", "WinnerRDU", "pvals")
+dat <- c(dat, "pvals")
+}
+
+save(list = dat, file = paste0(hng_res_dir, "wel_pval.Rda"))
+

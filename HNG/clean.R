@@ -96,5 +96,7 @@ DAT <- rbind(DAT,INS) %>%
 
 # remove stuff we no longer need
 rm(list=c("INS", "pSid", "DAT.names", "qid"))
+
 # Save into R
-save(DAT, file=paste0(hng_dir, "HNG.Rda"))
+hng_res_dir <- "../data/HNG_res/"
+save(DAT, file=paste0(hng_res_dir, "HNG.Rda"))
