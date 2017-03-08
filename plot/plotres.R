@@ -1,11 +1,13 @@
 library(dplyr)
 library(ggplot2)
-#load("../data/classify/merged/HNG.Rda")
+library(MSL)
 
 plotme <- function(dat, mod, par, sfrac) {
+	print(paste("Plotting Winners"))
 	# How many subjects do we have? To put in Title
 	dat <- dat %>%
-		filter(!is.na(dat$win.s01), !is.na(dat$win.s05), !is.na(dat$win.s10))
+		filter(!is.na(dat$win_01), !is.na(dat$win_05), !is.na(dat$win_10))
+
 	N <- nrow(dat)
 
 	# ggplot2 has special requirements when making plots in grids, I haven't decided if I approve,
@@ -31,55 +33,47 @@ plotme <- function(dat, mod, par, sfrac) {
 	
 	# EUT
 	# If the EUT model was declared winner, put 1, otherwise 0
-	dat01$cor <- ifelse(dat$win.s01 == 1, 1, 0)
-	dat05$cor <- ifelse(dat$win.s05 == 1, 1, 0)
-	dat10$cor <- ifelse(dat$win.s10 == 1, 1, 0)
+	dat01$cor <- ifelse(dat$win_01 == "EUT", 1, 0)
+	dat05$cor <- ifelse(dat$win_05 == "EUT", 1, 0)
+	dat10$cor <- ifelse(dat$win_10 == "EUT", 1, 0)
 	
 	# Drop crazy EUT estimates, and sample some fraction from the remainder
 	dat.eut <- rbind(dat01, dat05, dat10)
 	dat.eut$mod <- 1
 	dat.eut <- dat.eut %>%
-		filter(eut.r.Est < 10, eut.r.Est > -10) %>%
 		sample_frac(sfrac)
 	
 	# RDU Power
-	dat01$cor <- ifelse(dat$win.s01 == 2, 1, 0)
-	dat05$cor <- ifelse(dat$win.s05 == 2, 1, 0)
-	dat10$cor <- ifelse(dat$win.s10 == 2, 1, 0)
+	dat01$cor <- ifelse(dat$win_01 == "POW", 1, 0)
+	dat05$cor <- ifelse(dat$win_05 == "POW", 1, 0)
+	dat10$cor <- ifelse(dat$win_10 == "POW", 1, 0)
 	
 	# Drop crazy POW estimates, and sample some fraction from the remainder
 	dat.pow <- rbind(dat01, dat05, dat10)
 	dat.pow$mod <- 2
 	dat.pow <- dat.pow %>%
-		filter(pow.r.Est < 10, pow.r.Est > -10,
-		       pow.alpha.Est < 10, pow.alpha.Est > .05) %>%
 		sample_frac(sfrac)
 	
 	# RDU INV
-	dat01$cor <- ifelse(dat$win.s01 == 3, 1, 0)
-	dat05$cor <- ifelse(dat$win.s05 == 3, 1, 0)
-	dat10$cor <- ifelse(dat$win.s10 == 3, 1, 0)
+	dat01$cor <- ifelse(dat$win_01 == "INV", 1, 0)
+	dat05$cor <- ifelse(dat$win_05 == "INV", 1, 0)
+	dat10$cor <- ifelse(dat$win_10 == "INV", 1, 0)
 	
 	# Drop crazy INV estimates, and sample some fraction from the remainder
 	dat.inv <- rbind(dat01, dat05, dat10)
 	dat.inv$mod <- 3
 	dat.inv <- dat.inv %>%
-		filter(inv.r.Est < 10, inv.r.Est > -10,
-		       inv.alpha.Est < 10, inv.alpha.Est > .05) %>%
 		sample_frac(sfrac)
 	
 	# EDU Prelec
-	dat01$cor <- ifelse(dat$win.s01 == 4, 1, 0)
-	dat05$cor <- ifelse(dat$win.s05 == 4, 1, 0)
-	dat10$cor <- ifelse(dat$win.s10 == 4, 1, 0)
+	dat01$cor <- ifelse(dat$win_01 == "PRE", 1, 0)
+	dat05$cor <- ifelse(dat$win_05 == "PRE", 1, 0)
+	dat10$cor <- ifelse(dat$win_10 == "PRE", 1, 0)
 	
 	# Drop crazy PRE estimates, and sample some fraction from the remainder
 	dat.pre <- rbind(dat01, dat05, dat10)
 	dat.pre$mod <- 4
 	dat.pre <- dat.pre %>%
-		filter(pre.r.Est < 10, pre.r.Est > -10,
-		       pre.alpha.Est < 10, pre.alpha.Est > .05,
-		       pre.beta.Est  < 10, pre.beta.Est  > .05) %>%
 		sample_frac(sfrac)
 	
 	# Now we need to stack all the model datasets together
@@ -108,8 +102,8 @@ plotme <- function(dat, mod, par, sfrac) {
 	p <- ggplot(dat, aes_string(x = par, y = "cor"))
 	p <- p + scale_y_continuous(limits = c(0,1))
 	p <- p + facet_grid(sig~mod)
-	p <- p + geom_smooth(method="loess", span = 0.15, aes(color = mugrp))
-	#p <- p + geom_smooth(span = 0.15, aes(color = mugrp))
+	#p <- p + geom_smooth(method="loess", span = 0.15, aes(color = mugrp))
+	p <- p + geom_smooth(span = 0.15, aes(color = mugrp))
 	p <- p + labs(title = paste(mod, "Subjects, N =",N), x = paste(par, "Value"), y = "Frequency of Winning", color = "MU Group")
 	p <- p + theme(plot.title = element_text(hjust = 0.5))
 	
@@ -118,11 +112,13 @@ plotme <- function(dat, mod, par, sfrac) {
 
 plot.wel <- function(dat, mod, par, sfrac, wel.var) {
 
+	print(paste("Plotting Welfare"))
+
 	wel.vars <- c("WelSurplus", "WelMax", "WelEfficiency", "CEdiff", "Prob")
 	#wel.var <- "Prob"
 
 	dat <- dat %>%
-		filter(!is.na(dat$win.s01), !is.na(dat$win.s05), !is.na(dat$win.s10))
+		filter(!is.na(dat$win_01), !is.na(dat$win_05), !is.na(dat$win_10))
 	N <- nrow(dat)
 
 	dat$cor <- 1
@@ -135,48 +131,40 @@ plot.wel <- function(dat, mod, par, sfrac, wel.var) {
 	dat10 <- dat
 	dat10$sig <- 3
 
-	dat01$cor <- ifelse(dat$win.s01 == 1, dat[[paste0("eut.", wel.var)]], NA)
-	dat05$cor <- ifelse(dat$win.s05 == 1, dat[[paste0("eut.", wel.var)]], NA)
-	dat10$cor <- ifelse(dat$win.s10 == 1, dat[[paste0("eut.", wel.var)]], NA)
+	dat01$cor <- ifelse(dat$win_01 == "EUT", dat[[paste0("EUT_", wel.var)]], NA)
+	dat05$cor <- ifelse(dat$win_05 == "EUT", dat[[paste0("EUT_", wel.var)]], NA)
+	dat10$cor <- ifelse(dat$win_10 == "EUT", dat[[paste0("EUT_", wel.var)]], NA)
 
 	dat.eut <- rbind(dat01, dat05, dat10)
 	dat.eut$mod <- 1
 	dat.eut <- dat.eut %>%
-		filter(eut.r.Est < 10, eut.r.Est > -10) %>%
 		sample_frac(sfrac)
 
-	dat01$cor <- ifelse(dat$win.s01 == 2, dat[[paste0("pow.", wel.var)]], NA)
-	dat05$cor <- ifelse(dat$win.s05 == 2, dat[[paste0("pow.", wel.var)]], NA)
-	dat10$cor <- ifelse(dat$win.s10 == 2, dat[[paste0("pow.", wel.var)]], NA)
+	dat01$cor <- ifelse(dat$win_01 == "POW", dat[[paste0("POW_", wel.var)]], NA)
+	dat05$cor <- ifelse(dat$win_05 == "POW", dat[[paste0("POW_", wel.var)]], NA)
+	dat10$cor <- ifelse(dat$win_10 == "POW", dat[[paste0("POW_", wel.var)]], NA)
 
 	dat.pow <- rbind(dat01, dat05, dat10)
 	dat.pow$mod <- 2
 	dat.pow <- dat.pow %>%
-		filter(pow.r.Est < 10, pow.r.Est > -10,
-		       pow.alpha.Est < 10, pow.alpha.Est > .05) %>%
 		sample_frac(sfrac)
 
-	dat01$cor <- ifelse(dat$win.s01 == 3, dat[[paste0("inv.", wel.var)]], NA)
-	dat05$cor <- ifelse(dat$win.s05 == 3, dat[[paste0("inv.", wel.var)]], NA)
-	dat10$cor <- ifelse(dat$win.s10 == 3, dat[[paste0("inv.", wel.var)]], NA)
+	dat01$cor <- ifelse(dat$win_01 == "INV", dat[[paste0("INV_", wel.var)]], NA)
+	dat05$cor <- ifelse(dat$win_05 == "INV", dat[[paste0("INV_", wel.var)]], NA)
+	dat10$cor <- ifelse(dat$win_10 == "INV", dat[[paste0("INV_", wel.var)]], NA)
 
 	dat.inv <- rbind(dat01, dat05, dat10)
 	dat.inv$mod <- 3
 	dat.inv <- dat.inv %>%
-		filter(inv.r.Est < 10, inv.r.Est > -10,
-		       inv.alpha.Est < 10, inv.alpha.Est > .05) %>%
 		sample_frac(sfrac)
 
-	dat01$cor <- ifelse(dat$win.s01 == 4, dat[[paste0("PRE.", wel.var)]], NA)
-	dat05$cor <- ifelse(dat$win.s05 == 4, dat[[paste0("PRE.", wel.var)]], NA)
-	dat10$cor <- ifelse(dat$win.s10 == 4, dat[[paste0("PRE.", wel.var)]], NA)
+	dat01$cor <- ifelse(dat$win_01 == "PRE", dat[[paste0("PRE_", wel.var)]], NA)
+	dat05$cor <- ifelse(dat$win_05 == "PRE", dat[[paste0("PRE_", wel.var)]], NA)
+	dat10$cor <- ifelse(dat$win_10 == "PRE", dat[[paste0("PRE_", wel.var)]], NA)
 
 	dat.pre <- rbind(dat01, dat05, dat10)
 	dat.pre$mod <- 4
 	dat.pre <- dat.pre %>%
-		filter(pre.r.Est < 10, pre.r.Est > -10,
-		       pre.alpha.Est < 10, pre.alpha.Est > .05,
-		       pre.beta.Est  < 10, pre.beta.Est  > .05) %>%
 		sample_frac(sfrac)
 
 	dat <- rbind(dat.eut, dat.pow, dat.inv, dat.pre)
@@ -190,15 +178,16 @@ plot.wel <- function(dat, mod, par, sfrac, wel.var) {
 	dat$mugrp <- factor(dat$mugrp, levels=1:3, labels=c("0.01 < mu < 0.08", "0.08 < mu < 0.17", "0.17 < mu < 0.35"))
 
 	# Take the difference between the estimate and the real values for the welfare metric
-	dat$cor <- dat$cor - dat[[paste0("real.", wel.var)]]
+	dat$cor <- dat$cor - dat[[paste0("real_", wel.var)]]
 	# Reduce the final datafram as much as possible, its duplicated once and the entire dataframe is saved
 	# in the plot. This can really chow RAM, so only keep the variables needed for the plot.
+
 	dat <- dat %>%
 		select_(par, "cor", "sig", "mod", "mugrp") %>%
 		filter(!is.na(cor))
 
 	rows <- nrow(dat)
-	
+
 	print(paste("Now plotting", mod, "with", rows, "rows"))
 	p <- ggplot(dat, aes_string(x = par, y = "cor"))
 	p <- p + facet_grid(sig~mod, scales = "free_y")
@@ -214,7 +203,7 @@ plot.wel <- function(dat, mod, par, sfrac, wel.var) {
 allmu <- function(dat, sfrac) {
 
 	dat <- dat %>%
-		filter(!is.na(dat$win.s01), !is.na(dat$win.s05), !is.na(dat$win.s10))
+		filter(!is.na(dat$win_01), !is.na(dat$win_05), !is.na(dat$win_10))
 	# How many subjects do we have? To put in Title
 	N <- nrow(dat)
 
@@ -228,45 +217,33 @@ allmu <- function(dat, sfrac) {
 	dat10 <- dat
 	dat10$sig <- 3
 	
-	dat01$cor <- ifelse(dat$win.s01 == 1, 1, 0)
-	dat05$cor <- ifelse(dat$win.s05 == 1, 1, 0)
-	dat10$cor <- ifelse(dat$win.s10 == 1, 1, 0)
+	dat01$cor <- ifelse(dat$win_01 == 1, 1, 0)
+	dat05$cor <- ifelse(dat$win_05 == 1, 1, 0)
+	dat10$cor <- ifelse(dat$win_10 == 1, 1, 0)
 	
 	dat.eut <- rbind(dat01, dat05, dat10)
 	dat.eut$mod <- 1
-	dat.eut <- dat.eut %>%
-		filter(eut.r.Est < 10, eut.r.Est > -10)
 	
-	dat01$cor <- ifelse(dat$win.s01 == 2, 1, 0)
-	dat05$cor <- ifelse(dat$win.s05 == 2, 1, 0)
-	dat10$cor <- ifelse(dat$win.s10 == 2, 1, 0)
+	dat01$cor <- ifelse(dat$win_01 == 2, 1, 0)
+	dat05$cor <- ifelse(dat$win_05 == 2, 1, 0)
+	dat10$cor <- ifelse(dat$win_10 == 2, 1, 0)
 	
 	dat.pow <- rbind(dat01, dat05, dat10)
 	dat.pow$mod <- 2
-	dat.pow <- dat.pow %>%
-		filter(pow.r.Est < 10, pow.r.Est > -10,
-		       pow.alpha.Est < 10, pow.alpha.Est > .05)
 	
-	dat01$cor <- ifelse(dat$win.s01 == 3, 1, 0)
-	dat05$cor <- ifelse(dat$win.s05 == 3, 1, 0)
-	dat10$cor <- ifelse(dat$win.s10 == 3, 1, 0)
+	dat01$cor <- ifelse(dat$win_01 == 3, 1, 0)
+	dat05$cor <- ifelse(dat$win_05 == 3, 1, 0)
+	dat10$cor <- ifelse(dat$win_10 == 3, 1, 0)
 	
 	dat.inv <- rbind(dat01, dat05, dat10)
 	dat.inv$mod <- 3
-	dat.inv <- dat.inv %>%
-		filter(inv.r.Est < 10, inv.r.Est > -10,
-		       inv.alpha.Est < 10, inv.alpha.Est > .05)
 	
-	dat01$cor <- ifelse(dat$win.s01 == 4, 1, 0)
-	dat05$cor <- ifelse(dat$win.s05 == 4, 1, 0)
-	dat10$cor <- ifelse(dat$win.s10 == 4, 1, 0)
+	dat01$cor <- ifelse(dat$win_01 == 4, 1, 0)
+	dat05$cor <- ifelse(dat$win_05 == 4, 1, 0)
+	dat10$cor <- ifelse(dat$win_10 == 4, 1, 0)
 	
 	dat.pre <- rbind(dat01, dat05, dat10)
 	dat.pre$mod <- 4
-	dat.pre <- dat.pre %>%
-		filter(pre.r.Est < 10, pre.r.Est > -10,
-		       pre.alpha.Est < 10, pre.alpha.Est > .05,
-		       pre.beta.Est  < 10, pre.beta.Est  > .05)
 	
 	dat <- rbind(dat.eut, dat.pow, dat.inv, dat.pre)
 	dat$sig   <- factor(dat$sig, 1:3, labels = c("s01", "s05", "s10"))
@@ -292,6 +269,77 @@ allmu <- function(dat, sfrac) {
 	return(p)
 }
 
+all.wel <- function(dat, sfrac, wel.var) {
+
+	dat <- dat %>%
+		filter(!is.na(dat$win_01), !is.na(dat$win_05), !is.na(dat$win_10))
+	# How many subjects do we have? To put in Title
+	N <- nrow(dat)
+
+	dat$cor <- 1
+	dat$sig <- 0
+	
+	dat01 <- dat
+	dat01$sig <- 1
+	dat05 <- dat
+	dat05$sig <- 2
+	dat10 <- dat
+	dat10$sig <- 3
+	
+	dat01$cor <- ifelse(dat$win_01 == "EUT", dat[[paste0("EUT_", wel.var)]], NA)
+	dat05$cor <- ifelse(dat$win_05 == "EUT", dat[[paste0("EUT_", wel.var)]], NA)
+	dat10$cor <- ifelse(dat$win_10 == "EUT", dat[[paste0("EUT_", wel.var)]], NA)
+	
+	dat.eut <- rbind(dat01, dat05, dat10)
+	dat.eut$mod <- 1
+	
+	dat01$cor <- ifelse(dat$win_01 == "POW", dat[[paste0("POW_", wel.var)]], NA)
+	dat05$cor <- ifelse(dat$win_05 == "POW", dat[[paste0("POW_", wel.var)]], NA)
+	dat10$cor <- ifelse(dat$win_10 == "POW", dat[[paste0("POW_", wel.var)]], NA)
+	
+	dat.pow <- rbind(dat01, dat05, dat10)
+	dat.pow$mod <- 2
+
+	dat01$cor <- ifelse(dat$win_01 == "INV", dat[[paste0("INV_", wel.var)]], NA)
+	dat05$cor <- ifelse(dat$win_05 == "INV", dat[[paste0("INV_", wel.var)]], NA)
+	dat10$cor <- ifelse(dat$win_10 == "INV", dat[[paste0("INV_", wel.var)]], NA)
+
+	dat.inv <- rbind(dat01, dat05, dat10)
+	dat.inv$mod <- 3
+	
+	dat01$cor <- ifelse(dat$win_01 == "PRE", dat[[paste0("PRE_", wel.var)]], NA)
+	dat05$cor <- ifelse(dat$win_05 == "PRE", dat[[paste0("PRE_", wel.var)]], NA)
+	dat10$cor <- ifelse(dat$win_10 == "PRE", dat[[paste0("PRE_", wel.var)]], NA)
+	
+	dat.pre <- rbind(dat01, dat05, dat10)
+	dat.pre$mod <- 4
+	
+	dat <- rbind(dat.eut, dat.pow, dat.inv, dat.pre)
+	dat$sig   <- factor(dat$sig, 1:3, labels = c("s01", "s05", "s10"))
+	dat$mod   <- factor(dat$mod, 1:4, labels = c("EUT", "RDU Power", "RDU Inverse-S", "RDU Prelec"))
+	dat$model <- factor(dat$model, c("EUT", "pow", "invs", "prelec"), labels = c("EUT Sub", "RDU Power Sub", "RDU Inverse-S Sub", "RDU Prelec Sub"))
+
+	# Reduce the final datafram as much as possible, its duplicated once and the entire dataframe is saved
+	# in the plot. This can really chow RAM, so only keep the variables needed for the plot.
+	dat$cor <- dat$cor - dat[[paste0("real_", wel.var)]]
+	dat <- dat %>%
+		select_("mu", "cor", "sig", "mod", "model") %>%
+		filter(!is.na(cor), !is.na(mod))
+	
+
+	print("Now Plotting All")
+	p <- ggplot(dat, aes_string(x = "mu", y = "cor"))
+#	p <- p + scale_y_continuous(limits = c(0,1))
+	p <- p + scale_x_continuous(limits = c(0.01,0.35))
+	p <- p + facet_grid(model~mod)
+	#p <- p + geom_smooth(method="loess", span = 0.15, aes(color = sig))
+	p <- p + geom_smooth(span = 0.15, aes(color = sig))
+	p <- p + labs(title = paste("All", "Subjects, N =", N), x = paste("Mu", "Value"), y = "Frequency of Winning", color = "Significance\nValue")
+	p <- p + theme(plot.title = element_text(hjust = 0.5))
+	
+	return(p)
+}
+
 correct <- function(dat) {
 
 	# How many subjects do we have? To put in Title
@@ -307,21 +355,21 @@ correct <- function(dat) {
 	dat10 <- dat
 	dat10$sig <- 3
 	
-	dat01$cor <- ifelse(dat$win.s01 == 1 & dat$model != "EUT", 1, dat01$cor)
-	dat05$cor <- ifelse(dat$win.s05 == 1 & dat$model != "EUT", 1, dat05$cor)
-	dat10$cor <- ifelse(dat$win.s10 == 1 & dat$model != "EUT", 1, dat10$cor)
+	dat01$cor <- ifelse(dat$win_01 == 1 & dat$model != "EUT", 1, dat01$cor)
+	dat05$cor <- ifelse(dat$win_05 == 1 & dat$model != "EUT", 1, dat05$cor)
+	dat10$cor <- ifelse(dat$win_10 == 1 & dat$model != "EUT", 1, dat10$cor)
 
-	dat01$cor <- ifelse(dat$win.s01 == 2 & dat$model != "pow", 1, dat01$cor)
-	dat05$cor <- ifelse(dat$win.s05 == 2 & dat$model != "pow", 1, dat05$cor)
-	dat10$cor <- ifelse(dat$win.s10 == 2 & dat$model != "pow", 1, dat10$cor)
+	dat01$cor <- ifelse(dat$win_01 == 2 & dat$model != "pow", 1, dat01$cor)
+	dat05$cor <- ifelse(dat$win_05 == 2 & dat$model != "pow", 1, dat05$cor)
+	dat10$cor <- ifelse(dat$win_10 == 2 & dat$model != "pow", 1, dat10$cor)
 
-	dat01$cor <- ifelse(dat$win.s01 == 3 & dat$model != "invs", 1, dat01$cor)
-	dat05$cor <- ifelse(dat$win.s05 == 3 & dat$model != "invs", 1, dat05$cor)
-	dat10$cor <- ifelse(dat$win.s10 == 3 & dat$model != "invs", 1, dat10$cor)
+	dat01$cor <- ifelse(dat$win_01 == 3 & dat$model != "invs", 1, dat01$cor)
+	dat05$cor <- ifelse(dat$win_05 == 3 & dat$model != "invs", 1, dat05$cor)
+	dat10$cor <- ifelse(dat$win_10 == 3 & dat$model != "invs", 1, dat10$cor)
 
-	dat01$cor <- ifelse(dat$win.s01 == 4 & dat$model != "prelec", 1, dat01$cor)
-	dat05$cor <- ifelse(dat$win.s05 == 4 & dat$model != "prelec", 1, dat05$cor)
-	dat10$cor <- ifelse(dat$win.s10 == 4 & dat$model != "prelec", 1, dat10$cor)
+	dat01$cor <- ifelse(dat$win_01 == 4 & dat$model != "prelec", 1, dat01$cor)
+	dat05$cor <- ifelse(dat$win_05 == 4 & dat$model != "prelec", 1, dat05$cor)
+	dat10$cor <- ifelse(dat$win_10 == 4 & dat$model != "prelec", 1, dat10$cor)
 	
 	dat <- rbind(dat01, dat05, dat10)
 	
@@ -347,6 +395,10 @@ correct <- function(dat) {
 	return(p)
 }
 
+per_inst <- function(inst) {
+
+print(paste("Plotting for instrument", inst))
+
 # plot config
 dev.type <- "pdf"
 width <- 12
@@ -354,20 +406,20 @@ height <- 8
 units <- "in"
 path <- "plots"
 # Data config
-win_frac <- .25
+win_frac <- .5
 wel_frac <- 1
 all_frac <- .4
 
 wel.vars <- c("WelSurplus", "WelMax", "WelEfficiency", "CEdiff", "Prob")
-wel.var <- wel.vars[2]
+wel.var <- wel.vars[1]
 
 # Full data plot
-p.eut <- F
-p.pow <- F
-p.inv <- F
-p.pre <- F
-p.all <- F
-p.cor <- T
+p.eut <- T
+p.pow <- T
+p.inv <- T
+p.pre <- T
+p.all <- T
+p.cor <- F
 
 p.win <- T
 p.wel <- T
@@ -375,165 +427,190 @@ p.wel <- T
 # EUT Subjects
 if (p.eut) {
 	if(p.win) {
-		load("../data/classify/merged/HNG.Rda")
-		HNG <- HNG %>%
+		load(paste0("../data/classify/full/", inst, "-bak.Rda"))
+		FDAT <- get(inst) %>%
 			filter(model == "EUT") %>%
 			select(starts_with("real"), ends_with("CEdiff"), ends_with("Est"),
-			       starts_with("eut"), starts_with("win"), r, alpha, beta, mu)
+			       starts_with("EUT"), starts_with("win"), r, alpha, beta, mu)
 
-		print(paste0("Number of subjects in EUT Win: ",nrow(HNG)))
-		p <- plotme(HNG, "EUT", "r", sfrac = win_frac)
-		print("saving plot")
-		ggsave(paste0("../plots/eut-winners.", dev.type), plot = p, device = dev.type, path = path, width = width, height = height, units = units)
-		rm(HNG, p)
+#		print(paste0("Number of subjects in EUT Win: ",nrow(FDAT)))
+		p <- plotme(FDAT, "EUT", "r", sfrac = win_frac)
+#		print("saving plot")
+		ggsave(paste0("eut-winners-", inst, ".", dev.type), plot = p, device = dev.type, path = path, width = width, height = height, units = units)
+		rm(FDAT, p)
 	}
 	if (p.wel) {
-		load("../data/classify/merged/HNG.Rda")
-		HNG <- HNG %>%
+		load(paste0("../data/classify/full/", inst, "-bak.Rda"))
+		FDAT <- get(inst) %>%
 			filter(model == "EUT") %>%
 			select(starts_with("real"), ends_with("CEdiff"), ends_with("Est"), ends_with(wel.var),
-						starts_with("eut"), starts_with("win"), r, alpha, beta, mu)
+						starts_with("EUT"), starts_with("win"), r, alpha, beta, mu)
 
-		print(paste0("Number of subjects in EUT Welfare: ",nrow(HNG)))
-		p <- plot.wel(HNG, "EUT", "r", sfrac = wel_frac, wel.var)
-		print("saving plot")
-		ggsave(paste0("../plots/eut-welfare.", dev.type), plot = p, device = dev.type, path = path, width = width, height = height, units = units)
-		rm(HNG, p)
+#		print(paste0("Number of subjects in EUT Welfare: ",nrow(FDAT)))
+		p <- plot.wel(FDAT, "EUT", "r", sfrac = wel_frac, wel.var)
+#		print("saving plot")
+		ggsave(paste0("eut-welfare-", inst, ".", dev.type), plot = p, device = dev.type, path = path, width = width, height = height, units = units)
+		rm(FDAT, p)
 	}
 }
 
 # POW Subjects
 if (p.pow) {
 	if(p.win) {
-		load("../data/classify/merged/HNG.Rda")
-		HNG <- HNG %>%
+		load(paste0("../data/classify/full/", inst, "-bak.Rda"))
+		FDAT <- get(inst) %>%
 			filter(model == "pow") %>%
 			select(starts_with("real"), ends_with("CEdiff"), ends_with("Est"),
-			starts_with("pow"), starts_with("win"), r, alpha, beta, mu)
+			starts_with("POW"), starts_with("win"), r, alpha, beta, mu)
 
-		print(paste0("Number of subjects in POW Win: ",nrow(HNG)))
-		p <- plotme(HNG, "POW", "alpha", win_frac)
-		print("saving plot")
-		ggsave(paste0("../plots/pow-winners.", dev.type), plot = p, device = dev.type, path = path, width = width, height = height, units = units)
-		rm(HNG, p)
+#		print(paste0("Number of subjects in POW Win: ",nrow(FDAT)))
+		p <- plotme(FDAT, "POW", "alpha", win_frac)
+#		print("saving plot")
+		ggsave(paste0("pow-winners-", inst, ".", dev.type), plot = p, device = dev.type, path = path, width = width, height = height, units = units)
+		rm(FDAT, p)
 	}
 	if (p.wel) {
-		load("../data/classify/merged/HNG.Rda")
-		HNG <- HNG %>%
+		load(paste0("../data/classify/full/", inst, "-bak.Rda"))
+		FDAT <- get(inst) %>%
 			filter(model == "pow") %>%
 			select(starts_with("real"), ends_with("CEdiff"), ends_with("Est"), ends_with(wel.var),
-			starts_with("pow"), starts_with("win"), r, alpha, beta, mu)
+			starts_with("POW"), starts_with("win"), r, alpha, beta, mu)
 
-		print(paste0("Number of subjects in POW Welfare: ",nrow(HNG)))
-		p <- plot.wel(HNG, "POW", "alpha", wel_frac, wel.var)
-		print("saving plot")
-		ggsave(paste0("../plots/pow-welfare.", dev.type), plot = p, device = dev.type, path = path, width = width, height = height, units = units)
-		rm(HNG, p)
+#		print(paste0("Number of subjects in POW Welfare: ",nrow(FDAT)))
+		p <- plot.wel(FDAT, "POW", "alpha", wel_frac, wel.var)
+#		print("saving plot")
+		ggsave(paste0("pow-welfare-", inst, ".", dev.type), plot = p, device = dev.type, path = path, width = width, height = height, units = units)
+		rm(FDAT, p)
 	}
 }
 
 # INV Subjects
 if (p.inv) {
 	if(p.win) {
-		load("../data/classify/merged/HNG.Rda")
-		HNG <- HNG %>%
+		load(paste0("../data/classify/full/", inst, "-bak.Rda"))
+		FDAT <- get(inst) %>%
 			filter(model == "invs") %>%
-			filter(alpha > .2) %>%
+			filter(alpha > .3) %>%
 			select(starts_with("real"), ends_with("CEdiff"), ends_with("Est"),
-			       starts_with("inv"), starts_with("win"), r, alpha, beta, mu)
+			       starts_with("INV"), starts_with("win"), r, alpha, beta, mu)
 
-		print(paste0("Number of subjects in INV Win: ",nrow(HNG)))
-		p <- plotme(HNG, "Inverse S", "alpha", win_frac)
-		print("saving plot")
-		ggsave(paste0("../plots/inv-winners.", dev.type), plot = p, device = dev.type, path = path, width = width, height = height, units = units)
-		rm(HNG, p)
+#		print(paste0("Number of subjects in INV Win: ",nrow(FDAT)))
+		p <- plotme(FDAT, "Inverse S", "alpha", win_frac)
+#		print("saving plot")
+		ggsave(paste0("inv-winners-", inst, ".", dev.type), plot = p, device = dev.type, path = path, width = width, height = height, units = units)
+		rm(FDAT, p)
 	}
 	if (p.wel) {
-		load("../data/classify/merged/HNG.Rda")
-		HNG <- HNG %>%
+		load(paste0("../data/classify/full/", inst, "-bak.Rda"))
+		FDAT <- get(inst) %>%
 			filter(model == "invs") %>%
 			filter(alpha > 0.4) %>%
 			select(starts_with("real"), ends_with("CEdiff"), ends_with("Est"), ends_with(wel.var),
-			       starts_with("inv"), starts_with("win"), r, alpha, beta, mu)
+			       starts_with("INV"), starts_with("win"), r, alpha, beta, mu)
 
-		print(paste0("Number of subjects in INV Wel: ",nrow(HNG)))
-		p <- plot.wel(HNG, "Inverse S", "alpha", wel_frac, wel.var)
-		print("saving plot")
-		ggsave(paste0("../plots/inv-welfare.", dev.type), plot = p, device = dev.type, path = path, width = width, height = height, units = units)
-		rm(HNG, p)
+#		print(paste0("Number of subjects in INV Wel: ",nrow(FDAT)))
+		p <- plot.wel(FDAT, "Inverse S", "alpha", wel_frac, wel.var)
+#		print("saving plot")
+		ggsave(paste0("inv-welfare-", inst, ".", dev.type), plot = p, device = dev.type, path = path, width = width, height = height, units = units)
+		rm(FDAT, p)
 	}
 }
 
 # PRE Subjects
 if (p.pre) {
 	if(p.win) {
-		load("../data/classify/merged/HNG.Rda")
-		HNG <- HNG %>%
+		load(paste0("../data/classify/full/", inst, "-bak.Rda"))
+		FDAT <- get(inst) %>%
 			filter(model == "prelec") %>%
 			select(starts_with("real"), ends_with("CEdiff"), ends_with("Est"),
-			starts_with("pre"), starts_with("win"), r, alpha, beta, mu)
+			starts_with("PRE"), starts_with("win"), r, alpha, beta, mu)
 
-		print(paste0("Number of subjects in PRE Win: ",nrow(HNG)))
-		p <- plotme(HNG, "Prelec",    "alpha", win_frac)
-		print("saving plot")
-		ggsave(paste0("../plots/pre-a-winners.", dev.type), plot = p, device = dev.type, path = path, width = width, height = height, units = units)
+#		print(paste0("Number of subjects in PRE Win: ",nrow(FDAT)))
+		p <- plotme(filter(FDAT, beta > 1.2 | beta < 0.8), "Prelec",    "alpha", win_frac)
+#		print("saving plot")
+		ggsave(paste0("pre-a-winners-", inst, ".", dev.type), plot = p, device = dev.type, path = path, width = width, height = height, units = units)
 		rm(p)
 		print("Beginning with Prelec winner beta")
-		p <- plotme(HNG, "Prelec",    "beta", win_frac)
-		print("saving plot")
-		ggsave(paste0("../plots/pre-b-winners.", dev.type), plot = p, device = dev.type, path = path, width = width, height = height, units = units)
-		rm(HNG, p)
+		p <- plotme(filter(FDAT, alpha > 1.2 | alpha < 0.8), "Prelec",    "beta", win_frac)
+#		print("saving plot")
+		ggsave(paste0("pre-b-winners-", inst, ".", dev.type), plot = p, device = dev.type, path = path, width = width, height = height, units = units)
+		rm(FDAT, p)
 	}
 	if (p.wel) {
-		load("../data/classify/merged/HNG.Rda")
-		HNG <- HNG %>%
+		load(paste0("../data/classify/full/", inst, "-bak.Rda"))
+		FDAT <- get(inst) %>%
 			filter(model == "prelec") %>%
 			select(starts_with("real"), ends_with("CEdiff"), ends_with("Est"), ends_with(wel.var),
-			starts_with("pre"), starts_with("win"), r, alpha, beta, mu)
+			starts_with("PRE"), starts_with("win"), r, alpha, beta, mu)
 
-		print(paste0("Number of subjects in PRE Welfare: ",nrow(HNG)))
+#		print(paste0("Number of subjects in PRE Welfare: ",nrow(FDAT)))
 		print("Beginning with Prelec welfare alpha")
-		p <- plot.wel(HNG, "Prelec",    "alpha", wel_frac, wel.var)
-		print("saving plot")
-		ggsave(paste0("../plots/pre-a-welfare.", dev.type), plot = p, device = dev.type, path = path, width = width, height = height, units = units)
+		p <- plot.wel(FDAT, "Prelec",    "alpha", wel_frac, wel.var)
+#		print("saving plot")
+		ggsave(paste0("pre-a-welfare-", inst, ".", dev.type), plot = p, device = dev.type, path = path, width = width, height = height, units = units)
 		rm(p)
 		print("Beginning with Prelec welfare beta")
-		p <- plot.wel(HNG, "Prelec",    "beta", wel_frac, wel.var)
-		print("saving plot")
-		ggsave(paste0("../plots/pre-b-welfare.", dev.type), plot = p, device = dev.type, path = path, width = width, height = height, units = units)
-		rm(HNG, p)
+		p <- plot.wel(FDAT, "Prelec",    "beta", wel_frac, wel.var)
+#		print("saving plot")
+		ggsave(paste0("pre-b-welfare-", inst, ".", dev.type), plot = p, device = dev.type, path = path, width = width, height = height, units = units)
+		rm(FDAT, p)
 	}
 }
 
 # All Subjects with MU
 if (p.all) {
-load("../data/classify/merged/HNG.Rda")
-HNG <- HNG %>%
-	filter((alpha < 2 & alpha > 1.2 | alpha < 0.8) | is.na(alpha),
-	       (beta < 2 & beta > 1.2 | beta < 0.8) | is.na(beta) ) %>%
-	sample_frac(all_frac)
+	if(p.win) {
+		load(paste0("../data/classify/full/", inst, "-bak.Rda"))
+		FDAT <- get(inst) %>%
+			filter((alpha < 2 & alpha > 1.2 | alpha < 0.8) | is.na(alpha),
+						(beta < 2 & beta > 1.2 | beta < 0.8) | is.na(beta) ) %>%
+			sample_frac(all_frac)
 
-print(paste0("Number of subjects in results: ",nrow(HNG)))
+		#print(paste0("Number of subjects in results: ",nrow(FDAT)))
 
-p <- allmu(HNG, win_frac)
-		print("saving plot")
-ggsave(paste0("../plots/mu-winners.", dev.type), plot = p, device = dev.type, path = path, width = width, height = height, units = units)
-rm(HNG, p)
+		p <- allmu(FDAT, win_frac)
+#				print("saving plot")
+		ggsave(paste0("mu-winners-", inst, ".", dev.type), plot = p, device = dev.type, path = path, width = width, height = height, units = units)
+		rm(FDAT, p)
+	}
+	if(p.wel) {
+		load(paste0("../data/classify/full/", inst, "-bak.Rda"))
+		FDAT <- get(inst) %>%
+			filter((alpha < 2 & alpha > 1.2 | alpha < 0.8) | is.na(alpha),
+						(beta < 2 & beta > 1.2 | beta < 0.8) | is.na(beta) ) %>%
+			sample_frac(all_frac)
+
+		#print(paste0("Number of subjects in results: ",nrow(FDAT)))
+
+		p <- all.wel(FDAT, win_frac, wel.var)
+#				print("saving plot")
+		ggsave(paste0("mu-welfare-", inst, ".", dev.type), plot = p, device = dev.type, path = path, width = width, height = height, units = units)
+		rm(FDAT, p)
+	}
 }
 
 # Correct models
 if (p.cor) {
-load("../data/classify/merged/HNG.Rda")
+load(paste0("../data/classify/full/", inst, "-bak.Rda"))
 height <- height/3
-results <- HNG %>%
+results <- get(inst) %>%
 	filter((alpha > 1.2 | alpha < 0.8) | is.na(alpha),
 	       (beta > 1.2 | beta < 0.8) | is.na(beta) ) %>%
 	sample_frac(1)
 
-print(paste0("Number of subjects in results: ",nrow(results)))
+#print(paste0("Number of subjects in results: ",nrow(results)))
 
 p <- correct(results)
-		print("saving plot")
-ggsave(paste0("../plots/correct-winners.", dev.type), plot = p, device = dev.type, path = path, width = width, height = height, units = units)
-rm(HNG, p)
+#		print("saving plot")
+ggsave(paste0("correct-winners-", inst, ".", dev.type), plot = p, device = dev.type, path = path, width = width, height = height, units = units)
+rm(FDAT, p)
 }
+}
+
+instruments <- c("HNG", "HNG_1", "HO", "LMS20", "LMS30", "SH")
+
+for(i in instruments) {
+	per_inst(i)
+}
+
+print(warnings())
