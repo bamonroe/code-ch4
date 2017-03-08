@@ -1,5 +1,0 @@
-#!/bin/bash
-
-rsync -r --progress borg:rtmp/classify/results/ ./results/
-rsync -r --progress borg:rtmp/classify/estimates/ ./estimates/
-rsync -r --progress borg:rtmp/classify/rawdat/ ./rawdat/
