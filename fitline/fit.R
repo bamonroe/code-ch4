@@ -40,34 +40,36 @@ mk_pop <- function(mod, HH, props) {
 		return(pdat)
 	}
 
+	r_mean <- get("r_mean", envir = .GlobalEnv)
+	r_sd   <- get("r_sd", envir = .GlobalEnv)
 
-	r_mean <- 0.55
-	r_sd   <- 0.2
-
-	mu_mean0 <- 0.10
-	mu_sd0   <- 0.02
+	mu_mean0 <- get("mu_mean0", envir = .GlobalEnv)
+	mu_sd0   <- get("mu_sd0", envir = .GlobalEnv)
 	mu_mean  <- ln_mean(mu_mean0, mu_sd0)
 	mu_sd    <- ln_sd(mu_mean0, mu_sd0)
 
-	alpha_mean0 <- .5
-	alpha_sd0   <- 0.05
+	alpha_mean0 <- get("alpha_mean0", envir = .GlobalEnv)
+	alpha_sd0   <- get("alpha_sd0", envir = .GlobalEnv)
 	alpha_mean  <- ln_mean(alpha_mean0, alpha_sd0)
 	alpha_sd    <- ln_sd(alpha_mean0, alpha_sd0)
 
-	alpha2_mean0 <- 1.6
-	alpha2_sd0   <- 0.05
+	alpha2_mean0 <- get("alpha2_mean0", envir = .GlobalEnv)
+	alpha2_sd0   <- get("alpha2_sd0", envir = .GlobalEnv)
 	alpha2_mean  <- ln_mean(alpha2_mean0, alpha2_sd0)
 	alpha2_sd    <- ln_sd(alpha2_mean0, alpha2_sd0)
 
-	beta_mean0 <- .5
-	beta_sd0   <- 0.05
+
+	beta_mean0 <- get("beta_mean0", envir = .GlobalEnv)
+	beta_sd0   <- get("beta_sd0", envir = .GlobalEnv)
 	beta_mean  <- ln_mean(beta_mean0, beta_sd0)
 	beta_sd    <- ln_sd(beta_mean0, beta_sd0)
 
-	beta2_mean0 <- 1.6
-	beta2_sd0   <- 0.05
+	beta2_mean0 <- get("beta2_mean0", envir = .GlobalEnv)
+	beta2_sd0   <- get("beta2_sd0", envir = .GlobalEnv)
 	beta2_mean  <- ln_mean(beta2_mean0, beta2_sd0)
 	beta2_sd    <- ln_sd(beta2_mean0, beta2_sd0)
+
+	pop_mix <- get("pop_mix", envir = .GlobalEnv)
 
 	eut_means <- c(r = r_mean, mu = mu_mean)
 	eut_sd    <- c(r = r_sd, mu = mu_sd)
@@ -97,22 +99,22 @@ mk_pop <- function(mod, HH, props) {
 	}
 
 	if (mod == "POW") {
-	pdat <- mk_matrix(HH * pow_prop * .5, pow_means1, pow_sd1, burn = burn + HH )
-	pdat <- mk_matrix(HH * pow_prop * .5, pow_means2, pow_sd2, burn = burn + 2*HH ) %>% rbind(pdat)
+	pdat <- mk_matrix(HH * pow_prop * pop_mix, pow_means1, pow_sd1, burn = burn + HH )
+	pdat <- mk_matrix(HH * pow_prop * pop_mix, pow_means2, pow_sd2, burn = burn + 2*HH ) %>% rbind(pdat)
 	pdat$beta <- NA
 	pdat$model <- 2
 	}
 
 	if (mod == "INV") {
-	pdat <- mk_matrix(HH * inv_prop * .5, inv_means1, inv_sd1 , burn = burn + 3*HH )
-	pdat <- mk_matrix(HH * inv_prop * .5, inv_means2, inv_sd2 , burn = burn + 4*HH ) %>% rbind(pdat)
+	pdat <- mk_matrix(HH * inv_prop * pop_mix, inv_means1, inv_sd1 , burn = burn + 3*HH )
+	pdat <- mk_matrix(HH * inv_prop * pop_mix, inv_means2, inv_sd2 , burn = burn + 4*HH ) %>% rbind(pdat)
 	pdat$beta <- NA
 	pdat$model <- 3
 	}
 
 	if (mod == "PRE") {
-	pdat <- mk_matrix(HH * pre_prop * .5, pre_means1, pre_sd1 , burn = burn + 5*HH )
-	pdat <- mk_matrix(HH * pre_prop * .5, pre_means2, pre_sd2 , burn = burn + 6*HH ) %>% rbind(pdat)
+	pdat <- mk_matrix(HH * pre_prop * pop_mix, pre_means1, pre_sd1 , burn = burn + 5*HH )
+	pdat <- mk_matrix(HH * pre_prop * pop_mix, pre_means2, pre_sd2 , burn = burn + 6*HH ) %>% rbind(pdat)
 	pdat$model <- 4
 	}
 
@@ -153,11 +155,28 @@ who_won <- function(lo_obj, HH, props) {
 
 HH <- 10000
 
+r_mean       <- 0.55
+r_sd         <- 0.2
+
+mu_mean0     <- 0.05
+mu_sd0       <- 0.02
+
+alpha_mean0  <- .5
+alpha_sd0    <- 0.05
+alpha2_mean0 <- 1.6
+alpha2_sd0   <- 0.05
+
+beta_mean0   <- .2
+beta_sd0     <- 0.05
+beta2_mean0  <- 1.8
+beta2_sd0    <- 0.05
+
+pop_mix   <- 0.5
+
 eut_prop <- 0
 pow_prop <- 0
-inv_prop <- 0
-pre_prop <- 1
-
+inv_prop <- 1
+pre_prop <- 0
 
 props <- list(EUT = eut_prop, POW = pow_prop, INV = inv_prop, PRE = pre_prop)
 
