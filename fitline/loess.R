@@ -1,10 +1,11 @@
 library(dplyr)
+library(mgcv)
 
 instruments <- c("HNG", "HNG_1", "HO", "LMS20", "LMS30", "SH")
 instruments <- c("HNG_1")
 data_dir <- "../data/classify/full/"
 fit_dir <- "../data/lo_fits/"
-suffix <- "-mini.Rda"
+save_suffix <- "-gam.Rda"
 
 fit_lo <- function(dat, mod, win) {
 
@@ -16,11 +17,11 @@ fit_lo <- function(dat, mod, win) {
 	print(paste(mod, "as", win, ":", sum(dat$win_05)))
 
 	if (mod == "EUT") {
-		hfit <- loess(win_05 ~ r + mu, dat )
+		hfit <- gam(win_05 ~ s(r) + s(mu), data = dat)
 	} else if ((mod == "pow") | (mod == "invs")) {
-		hfit <- loess(win_05 ~ r + mu + alpha, dat )
+		hfit <- gam(win_05 ~ s(r) + s(mu) +s(alpha) + s(r, alpha), data = dat)
 	} else if (mod == "prelec") {
-		hfit <- loess(win_05 ~ r + mu + alpha + beta, dat )
+		hfit <- gam(win_05 ~ s(r) + s(mu) + s(alpha) + s(beta) + s(alpha, beta)+ s(r, alpha, beta), data = dat)
 	} else {
 		stop("Not a correct model")
 	}
@@ -30,7 +31,7 @@ fit_lo <- function(dat, mod, win) {
 
 for (inst in instruments) {
 
-	load(paste0(data_dir, inst, suffix))
+	load(paste0(data_dir, inst, load_suffix))
 
 	cat(paste("\nFitting for", inst),"\n")
 
@@ -60,9 +61,7 @@ for (inst in instruments) {
 
 	assign(fit_name, loess_fits)
 
-	print(ls())
-
-	save(list=fit_name, file=paste0(fit_dir, fit_name, suffix))
+	save(list=fit_name, file=paste0(fit_dir, fit_name, save_suffix))
 	cat("\n")
 
 }

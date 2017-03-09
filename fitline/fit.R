@@ -1,10 +1,13 @@
 library(halton)
-library(ggplot2)
+library(dplyr)
+library(mgcv)
 
 instruments <- c("HNG", "HNG_1", "HO", "LMS20", "LMS30", "SH")
 instruments <- c("HNG_1")
-fit_dir    <- "../data/lo_fits//"
-suffix      <- "_loess-mini.Rda"
+fit_dir    <- "../data/lo_fits/"
+load_suffix  <- "_loess-mini.Rda"
+load_suffix  <- "_loess-gam.Rda"
+save_suffix <- "-win.Rda"
 
 # mvhnorm is a multi-variate normal distribution using halton draws
 
@@ -149,49 +152,66 @@ who_won <- function(lo_obj, HH, props) {
 
 	pred_mat <- do.call(rbind, pred_sums)
 	rownames(pred_mat) <- paste(colnames(pred_mat), "subjects")
-	pred_mat
+
+	list(predictions = predictions, pred_sums = pred_mat)
 }
 
 
 HH <- 10000
 
-r_mean       <- 0.55
-r_sd         <- 0.2
+r_mean       <- 0.6
+r_sd         <- 0.1
 
-mu_mean0     <- 0.05
+mu_mean0     <- 0.10
 mu_sd0       <- 0.02
 
-alpha_mean0  <- .5
-alpha_sd0    <- 0.05
+alpha_mean0  <- .6
+alpha_sd0    <- 0.15
 alpha2_mean0 <- 1.6
-alpha2_sd0   <- 0.05
+alpha2_sd0   <- 0.15
 
-beta_mean0   <- .2
-beta_sd0     <- 0.05
-beta2_mean0  <- 1.8
-beta2_sd0    <- 0.05
+beta_mean0   <- .6
+beta_sd0     <- 0.15
+beta2_mean0  <- 1.6
+beta2_sd0    <- 0.15
 
 pop_mix   <- 0.5
 
-eut_prop <- 0
-pow_prop <- 0
-inv_prop <- 1
-pre_prop <- 0
+eut_prop <- .5
+pow_prop <- .1
+inv_prop <- .1
+pre_prop <- .3
 
-props <- list(EUT = eut_prop, POW = pow_prop, INV = inv_prop, PRE = pre_prop)
+# make sure the props sum to 1
+eut_prop0 <- eut_prop / (eut_prop + pow_prop + inv_prop + pre_prop)
+pow_prop0 <- pow_prop / (eut_prop + pow_prop + inv_prop + pre_prop)
+inv_prop0 <- inv_prop / (eut_prop + pow_prop + inv_prop + pre_prop)
+pre_prop0 <- pre_prop / (eut_prop + pow_prop + inv_prop + pre_prop)
+props <- list(EUT = eut_prop0, POW = pow_prop0, INV = inv_prop0, PRE = pre_prop0)
 
 for (inst in instruments) {
 
-	load(paste0(fit_dir, inst, suffix))
+	load(paste0(fit_dir, inst, load_suffix))
 
 	mod_fit <- get(paste0(inst, "_loess"))
 
-	winners <- who_won(mod_fit, HH, props) %>% print
+	#list(predictions = predictions, pred_sums = pred_mat)
+	winners <- who_won(mod_fit, HH, props)
 
-	(who_won(mod_fit, HH, props) / HH) %>% print
+	pred_sums <- winners$pred_sums
+	pred_dat  <- winners$predictions
 
-	print(colSums(winners) / HH)
+	pred_sums %>% print
 
+	(pred_sums / HH) %>% print
+
+	print(colSums(pred_sums) / HH)
+
+	print(rowSums(pred_sums) / HH)
+	print(sum(rowSums(pred_sums) / HH))
+	print(unlist(props))
+
+	save(winners, file = paste0(fit_dir, inst, save_suffix))
 
 }
 
