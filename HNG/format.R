@@ -121,7 +121,7 @@ for (m in c("EUT", "POW", "INV", "PRE")) {
 	hng.df[which(hng.df[[var]] < -15), grep(m, names(hng.df)) ] <- NA
 	hng.df[which(hng.df[[var]] > 15), grep(m, names(hng.df)) ] <- NA
 
-	sub.df[which((sub.df[[var]] > 0.99) & (sub.df[[var]] > 1.01)), grep(m, names(sub.df)) ] <- NA
+	sub.df[which((sub.df[[var]] > 0.99) & (sub.df[[var]] < 1.01)), grep(m, names(sub.df)) ] <- NA
 	sub.df[which(sub.df[[var]] < -15), grep(m, names(sub.df))] <- NA
 	sub.df[which(sub.df[[var]] > 15), grep(m, names(sub.df))] <- NA
 

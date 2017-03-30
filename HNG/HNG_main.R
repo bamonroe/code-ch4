@@ -1,11 +1,11 @@
 library(ctools)
 c.library("MSL", "welfare", "dplyr")
 
-do.clean    <- F
-do.estimate <- F
-do.format   <- F
-do.common   <- F
-do.wel      <- F
+do.clean    <- T
+do.estimate <- T
+do.format   <- T
+do.common   <- T
+do.wel      <- T
 do.plots    <- T
 
 # Take thr original HNG data and clean it up for use in R and my MSL library

@@ -11,7 +11,6 @@ if (exists("per.choice")) {
 	p
 
 	ggsave(filename = "../plots/HNG_CS.pdf", plot = p, device = "pdf")
-
 }
 
 if (exists("per.sub")) {
@@ -42,14 +41,15 @@ if (exists("pvals")) {
 	r <- r + labs(title = "Distribution of p-values of Test of EUT", x = latex2exp::TeX("$p$-value on test that $\\omega(p) =\\, p$"), y = "Density")
 	r
 
-	s <- q + geom_histogram(aes(x = Winner), stat="count", fill = "dark blue", width = 0.5, center = 0)
-	s <- s + labs(title = paste0("Classification with a 5% Significance Level, N = ", NN), y = "Count")
+	#s <- q + geom_histogram(aes(x = Winner), stat="count", fill = "dark blue", width = 0.5, center = 0)
+	s <- q + geom_histogram(aes(y = ..count../sum(..count..), x = Winner), stat="count", fill = "dark blue", width = 0.5, center = 0)
+	s <- s + labs(title = paste0("Classification with a 5% Significance Level, N = ", NN), y = "Percentage of All Winners")
 	s
 
 	mm <- cowplot::plot_grid(r, s, ncol = 2)
 	mm
 	cowplot::save_plot("../plots/HNG_pvals.pdf", mm, device = "pdf", base_aspect_ratio = 2, base_height = 6)
 
-#	ggsave(filename = "../plots/HNG_pvals.pdf", plot = r, device = "pdf")
+	ggsave(filename = "../plots/HNG_pvals.pdf", plot = r, device = "pdf")
 
 }

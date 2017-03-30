@@ -117,9 +117,6 @@ d.pre <- d.interesting %>%
 	select(starts_with("PRE")) %>%
 	t()
 
-
-View(d.interesting)
-
 vname <- "INV_alpha_Est"
 
 big.five <- lapply(names(d.interesting), function(vname) {

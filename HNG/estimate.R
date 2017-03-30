@@ -26,8 +26,6 @@ HNG$B0 <- ((HNG$B0 - 10)/40)/20
 HNG$B1 <- ((HNG$B1 - 10)/40)/20
 HNG$B2 <- ((HNG$B2 - 10)/40)/20
 
-
-
 sub.est <- ML.all(HNG, init = "POOLED", iterations = inum, do.par = T)
 sub.df  <- ML.dataframe(sub.est)
 
