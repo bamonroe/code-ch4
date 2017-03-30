@@ -5,10 +5,10 @@ instruments <- c("HNG", "HNG_1", "HO", "LMS20", "LMS30", "SH")
 instruments <- c("HNG_1")
 data_dir <- "../data/classify/full/"
 fit_dir <- "../data/lo_fits/"
+load_suffix <- "-mini.Rda"
 save_suffix <- "-gam.Rda"
 
-fit_lo <- function(dat, mod, win) {
-
+fit_mod <- function(dat, mod, win) {
 	dat <- dat %>%
 		filter(model == mod)
 
@@ -40,22 +40,22 @@ for (inst in instruments) {
 
 	loess_fits <- list()
 
-	loess_fits$EUT <- list(EUT = fit_lo(idat, "EUT", "EUT"),
-	                       POW = fit_lo(idat, "EUT", "POW"),
-	                       INV = fit_lo(idat, "EUT", "INV"),
-	                       PRE = fit_lo(idat, "EUT", "PRE"))
-	loess_fits$POW <- list(EUT = fit_lo(idat, "pow", "EUT"),
-	                       POW = fit_lo(idat, "pow", "POW"),
-	                       INV = fit_lo(idat, "pow", "INV"),
-	                       PRE = fit_lo(idat, "pow", "PRE"))
-	loess_fits$INV <- list(EUT = fit_lo(idat, "invs", "EUT"),
-	                       POW = fit_lo(idat, "invs", "POW"),
-	                       INV = fit_lo(idat, "invs", "INV"),
-	                       PRE = fit_lo(idat, "invs", "PRE"))
-	loess_fits$PRE <- list(EUT = fit_lo(idat, "prelec", "EUT"),
-	                       POW = fit_lo(idat, "prelec", "POW"),
-	                       INV = fit_lo(idat, "prelec", "INV"),
-	                       PRE = fit_lo(idat, "prelec", "PRE"))
+	loess_fits$EUT <- list(EUT = fit_mod(idat, "EUT", "EUT"),
+	                       POW = fit_mod(idat, "EUT", "POW"),
+	                       INV = fit_mod(idat, "EUT", "INV"),
+	                       PRE = fit_mod(idat, "EUT", "PRE"))
+	loess_fits$POW <- list(EUT = fit_mod(idat, "pow", "EUT"),
+	                       POW = fit_mod(idat, "pow", "POW"),
+	                       INV = fit_mod(idat, "pow", "INV"),
+	                       PRE = fit_mod(idat, "pow", "PRE"))
+	loess_fits$INV <- list(EUT = fit_mod(idat, "invs", "EUT"),
+	                       POW = fit_mod(idat, "invs", "POW"),
+	                       INV = fit_mod(idat, "invs", "INV"),
+	                       PRE = fit_mod(idat, "invs", "PRE"))
+	loess_fits$PRE <- list(EUT = fit_mod(idat, "prelec", "EUT"),
+	                       POW = fit_mod(idat, "prelec", "POW"),
+	                       INV = fit_mod(idat, "prelec", "INV"),
+	                       PRE = fit_mod(idat, "prelec", "PRE"))
 
 	fit_name <- paste0(inst, "_loess")
 
