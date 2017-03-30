@@ -2,12 +2,10 @@ library(dplyr)
 library(ggplot2)
 library(MSL)
 
+
 plotme <- function(dat, mod, par, sfrac) {
 	print(paste("Plotting Winners"))
 	# How many subjects do we have? To put in Title
-	dat <- dat %>%
-		filter(!is.na(dat$win_01), !is.na(dat$win_05), !is.na(dat$win_10))
-
 	N <- nrow(dat)
 
 	# ggplot2 has special requirements when making plots in grids, I haven't decided if I approve,
@@ -88,9 +86,9 @@ plotme <- function(dat, mod, par, sfrac) {
 	# of observations
 	dat$mugrp <- 0
 	dat$mugrp <- ifelse(dat$mu < .1, 1, dat$mugrp)
-	dat$mugrp <- ifelse(dat$mu < .23 & dat$mugrp ==0, 2, dat$mugrp)
-	dat$mugrp <- ifelse(dat$mu < .35 & dat$mugrp ==0, 3, dat$mugrp)
-	dat$mugrp <- factor(dat$mugrp, levels=1:3, labels=c("0.01 < mu < 0.10", "0.10 < mu < 0.23", "0.23 < mu < 0.35"))
+	dat$mugrp <- ifelse(dat$mu < .20 & dat$mugrp ==0, 2, dat$mugrp)
+	dat$mugrp <- ifelse(dat$mu < .30 & dat$mugrp ==0, 3, dat$mugrp)
+	dat$mugrp <- factor(dat$mugrp, levels=1:3, labels=c("0.01 < mu < 0.10", "0.10 < mu < 0.20", "0.20 < mu < 0.30"))
 
 	# Reduce the final datafram as much as possible, its duplicated once and the entire dataframe is saved
 	# in the plot. This can really chow RAM, so only keep the variables needed for the plot.
@@ -105,7 +103,7 @@ plotme <- function(dat, mod, par, sfrac) {
 	#p <- p + geom_smooth(method="loess", span = 0.15, aes(color = mugrp))
 	p <- p + geom_smooth(span = 0.15, aes(color = mugrp))
 	p <- p + labs(title = paste(mod, "Subjects, N =",N), x = paste(par, "Value"), y = "Frequency of Winning", color = "MU Group")
-	p <- p + theme(plot.title = element_text(hjust = 0.5))
+	p <- p + theme(plot.title = element_text(hjust = 0.5), legend.position = "bottom")
 	
 	return(p)
 }
@@ -195,15 +193,12 @@ plot.wel <- function(dat, mod, par, sfrac, wel.var) {
 	#p <- p + geom_smooth(method="loess", span = 0.15, aes(color = mugrp))
 	p <- p + geom_smooth(span = 0.15, aes(color = mugrp))
 	p <- p + labs(title = paste(mod, "Subjects"), x = paste(par, "Value"), y = paste("Estimated", wel.var, "- Real", wel.var), color = "MU Group")
-	p <- p + theme(plot.title = element_text(hjust = 0.5))
+	p <- p + theme(plot.title = element_text(hjust = 0.5), legend.position = "bottom")
 	
 	return(p)
 }
 
 allmu <- function(dat, sfrac) {
-
-	dat <- dat %>%
-		filter(!is.na(dat$win_01), !is.na(dat$win_05), !is.na(dat$win_10))
 	# How many subjects do we have? To put in Title
 	N <- nrow(dat)
 
@@ -216,31 +211,31 @@ allmu <- function(dat, sfrac) {
 	dat05$sig <- 2
 	dat10 <- dat
 	dat10$sig <- 3
-	
-	dat01$cor <- ifelse(dat$win_01 == 1, 1, 0)
-	dat05$cor <- ifelse(dat$win_05 == 1, 1, 0)
-	dat10$cor <- ifelse(dat$win_10 == 1, 1, 0)
+
+	dat01$cor <- ifelse(dat$win_01 == "EUT", 1, 0)
+	dat05$cor <- ifelse(dat$win_05 == "EUT", 1, 0)
+	dat10$cor <- ifelse(dat$win_10 == "EUT", 1, 0)
 	
 	dat.eut <- rbind(dat01, dat05, dat10)
 	dat.eut$mod <- 1
 	
-	dat01$cor <- ifelse(dat$win_01 == 2, 1, 0)
-	dat05$cor <- ifelse(dat$win_05 == 2, 1, 0)
-	dat10$cor <- ifelse(dat$win_10 == 2, 1, 0)
+	dat01$cor <- ifelse(dat$win_01 == "POW", 1, 0)
+	dat05$cor <- ifelse(dat$win_05 == "POW", 1, 0)
+	dat10$cor <- ifelse(dat$win_10 == "POW", 1, 0)
 	
 	dat.pow <- rbind(dat01, dat05, dat10)
 	dat.pow$mod <- 2
 	
-	dat01$cor <- ifelse(dat$win_01 == 3, 1, 0)
-	dat05$cor <- ifelse(dat$win_05 == 3, 1, 0)
-	dat10$cor <- ifelse(dat$win_10 == 3, 1, 0)
+	dat01$cor <- ifelse(dat$win_01 == "INV", 1, 0)
+	dat05$cor <- ifelse(dat$win_05 == "INV", 1, 0)
+	dat10$cor <- ifelse(dat$win_10 == "INV", 1, 0)
 	
 	dat.inv <- rbind(dat01, dat05, dat10)
 	dat.inv$mod <- 3
 	
-	dat01$cor <- ifelse(dat$win_01 == 4, 1, 0)
-	dat05$cor <- ifelse(dat$win_05 == 4, 1, 0)
-	dat10$cor <- ifelse(dat$win_10 == 4, 1, 0)
+	dat01$cor <- ifelse(dat$win_01 == "PRE", 1, 0)
+	dat05$cor <- ifelse(dat$win_05 == "PRE", 1, 0)
+	dat10$cor <- ifelse(dat$win_10 == "PRE", 1, 0)
 	
 	dat.pre <- rbind(dat01, dat05, dat10)
 	dat.pre$mod <- 4
@@ -255,17 +250,127 @@ allmu <- function(dat, sfrac) {
 	dat <- dat %>%
 		select_("mu", "cor", "sig", "mod", "model") %>%
 		filter(!is.na(cor), !is.na(mod))
-	
+
 	print("Now Plotting All")
 	p <- ggplot(dat, aes_string(x = "mu", y = "cor"))
 	p <- p + scale_y_continuous(limits = c(0,1))
-	p <- p + scale_x_continuous(limits = c(0.01,0.35))
+	p <- p + scale_x_continuous(limits = c(0.01,0.30))
 	p <- p + facet_grid(model~mod)
 	#p <- p + geom_smooth(method="loess", span = 0.15, aes(color = sig))
-	p <- p + geom_smooth(span = 0.15, aes(color = sig))
-	p <- p + labs(title = paste("All", "Subjects, N =", N), x = paste("Mu", "Value"), y = "Frequency of Winning", color = "Significance\nValue")
-	p <- p + theme(plot.title = element_text(hjust = 0.5))
+	#p <- p + geom_smooth(span = 0.15, aes(color = sig))
+	p <- p + geom_smooth(aes(color = sig))
+	p <- p + labs(title = paste("All", "Subjects, N =", N), x = paste("Lambda", "Value"), y = "Frequency of Winning", color = "Significance\nValue")
+	p <- p + theme(plot.title = element_text(hjust = 0.5), legend.position = "bottom")
 	
+	rm(dat)
+	return(p)
+}
+
+P_AB_ALL <- function(dat, sfrac) {
+	# How many subjects do we have? To put in Title
+	N <- nrow(dat)
+
+	# Given that you have been declared N, whats the likelihood you were M
+	# so P(M) on the Y axis, the row facet will be the true model,
+
+	# Probability you are the row model, given you've been declared the column model
+
+	print("here0")
+
+	# Need to make Y = model
+	dat$y <- 0
+	dat$sig <- 0
+	
+	dat.eut <- dat %>% filter(win_05 == "EUT")
+	dat.eut.eut <- dat.eut
+	dat.pow.eut <- dat.eut
+	dat.inv.eut <- dat.eut
+	dat.pre.eut <- dat.eut
+
+	dat.pow <- dat %>% filter(win_05 == "POW")
+	dat.eut.pow <- dat.pow
+	dat.pow.pow <- dat.pow
+	dat.inv.pow <- dat.pow
+	dat.pre.pow <- dat.pow
+
+	dat.inv <- dat %>% filter(win_05 == "INV")
+	dat.eut.inv <- dat.inv
+	dat.pow.inv <- dat.inv
+	dat.inv.inv <- dat.inv
+	dat.pre.inv <- dat.inv
+
+	dat.pre <- dat %>% filter(win_05 == "PRE")
+	dat.eut.pre <- dat.pre
+	dat.pow.pre <- dat.pre
+	dat.inv.pre <- dat.pre
+	dat.pre.pre <- dat.pre
+
+	print("here1")
+	print("here1.1")
+
+	dat.eut.eut$y <- ifelse(dat.eut$model == "EUT", 1, 0)
+	dat.pow.eut$y <- ifelse(dat.eut$model == "EUT", 1, 0)
+	dat.inv.eut$y <- ifelse(dat.eut$model == "EUT", 1, 0)
+	dat.pre.eut$y <- ifelse(dat.eut$model == "EUT", 1, 0)
+
+	dat.eut <- rbind(dat.eut.eut, dat.pow.eut, dat.inv.eut, dat.pre.eut)
+	dat.eut$mod <- 1
+
+	print("here2")
+	dat.eut.pow$y <- ifelse(dat.pow$model == "pow", 1, 0)
+	dat.pow.pow$y <- ifelse(dat.pow$model == "pow", 1, 0)
+	dat.inv.pow$y <- ifelse(dat.pow$model == "pow", 1, 0)
+	dat.pre.pow$y <- ifelse(dat.pow$model == "pow", 1, 0)
+
+	dat.pow <- rbind(dat.eut.pow, dat.pow.pow, dat.inv.pow, dat.pre.pow)
+	dat.pow$mod <- 2
+
+	print("here3")
+	dat.eut.inv$y <- ifelse(dat.inv$model == "invs", 1, 0)
+	dat.pow.inv$y <- ifelse(dat.inv$model == "invs", 1, 0)
+	dat.inv.inv$y <- ifelse(dat.inv$model == "invs", 1, 0)
+	dat.pre.inv$y <- ifelse(dat.inv$model == "invs", 1, 0)
+
+	dat.inv <- rbind(dat.eut.inv, dat.pow.inv, dat.inv.inv, dat.pre.inv)
+	dat.inv$mod <- 3
+
+	print("here4")
+	dat.eut.pre$y <- ifelse(dat.pre$model == "prelec", 1, 0)
+	dat.pow.pre$y <- ifelse(dat.pre$model == "prelec", 1, 0)
+	dat.inv.pre$y <- ifelse(dat.pre$model == "prelec", 1, 0)
+	dat.pre.pre$y <- ifelse(dat.pre$model == "prelec", 1, 0)
+
+	dat.pre <- rbind(dat.eut.pre, dat.pow.pre, dat.inv.pre, dat.pre.pre)
+	dat.pre$mod <- 4
+
+	print("here5")
+	dat <- rbind(dat.eut, dat.pow, dat.inv, dat.pre)
+
+	dat$sig   <- 0
+	#dat$sig   <- factor(dat$sig, 1:3, labels = c("s01", "s05", "s10"))
+	dat$mod   <- factor(dat$mod, 1:4, labels = c("EUT", "RDU Power", "RDU Inverse-S", "RDU Prelec"))
+	dat$model <- factor(dat$model, c("EUT", "pow", "invs", "prelec"), labels = c("EUT Sub", "RDU Power Sub", "RDU Inverse-S Sub", "RDU Prelec Sub"))
+
+	# Reduce the final datafram as much as possible, its duplicated once and the entire dataframe is saved
+	# in the plot. This can really chow RAM, so only keep the variables needed for the plot.
+	print("here6")
+	dat <- dat %>%
+		select_("mu", "y", "sig", "mod", "model") %>%
+		filter(!is.na(y), !is.na(mod))
+
+	print("Now Plotting All")
+	p <- ggplot(dat, aes_string(x = "mu", y = "y"))
+	p <- p + scale_y_continuous(limits = c(0,1))
+	p <- p + scale_x_continuous(limits = c(0.01,0.30))
+	p <- p + facet_grid(model~mod)
+	#p <- p + geom_smooth(method="loess", span = 0.15, aes(color = sig))
+	#p <- p + geom_smooth(span = 0.15, aes(color = sig))
+	#p <- p + geom_smooth(aes(color = sig))
+	p <- p + geom_smooth(aes())
+	p <- p + labs(title = paste("All", "Subjects, N =", N), x = paste("Lambda", "Value"), y = "Frequency of Winning", color = "Significance\nValue")
+	p <- p + theme(plot.title = element_text(hjust = 0.5), legend.position = "bottom")
+	
+	rm(dat)
 	return(p)
 }
 
@@ -334,8 +439,8 @@ all.wel <- function(dat, sfrac, wel.var) {
 	p <- p + facet_grid(model~mod)
 	#p <- p + geom_smooth(method="loess", span = 0.15, aes(color = sig))
 	p <- p + geom_smooth(span = 0.15, aes(color = sig))
-	p <- p + labs(title = paste("All", "Subjects, N =", N), x = paste("Mu", "Value"), y = "Frequency of Winning", color = "Significance\nValue")
-	p <- p + theme(plot.title = element_text(hjust = 0.5))
+	p <- p + labs(title = paste("All", "Subjects, N =", N), x = paste("Lambda", "Value"), y = "Frequency of Winning", color = "Significance\nValue")
+	p <- p + theme(plot.title = element_text(hjust = 0.5), legend.position = "bottom")
 	
 	return(p)
 }
@@ -389,8 +494,8 @@ correct <- function(dat) {
 	p <- p + facet_grid(~model)
 	#p <- p + geom_smooth(method="loess", span = 0.15, aes(color = sig))
 	p <- p + geom_smooth(span = 0.15, aes(color = sig))
-	p <- p + labs(title = paste("All", "Subjects, N =", N), x = paste("Mu", "Value"), y = "Frequency of False Positives", color = "Significance\nValue")
-	p <- p + theme(plot.title = element_text(hjust = 0.5))
+	p <- p + labs(title = paste("All", "Subjects, N =", N), x = paste("Lambda", "Value"), y = "Frequency of False Positives", color = "Significance\nValue")
+	p <- p + theme(plot.title = element_text(hjust = 0.5), legend.position = "bottom")
 	
 	return(p)
 }
@@ -402,16 +507,16 @@ print(paste("Plotting for instrument", inst))
 # plot config
 dev.type <- "pdf"
 width <- 12
-height <- 8
+height <- 10
 units <- "in"
-path <- "plots"
+plot_dir <- "../plots/"
 # Data config
-win_frac <- .5
-wel_frac <- 1
-all_frac <- .4
+win_frac <- 1
+wel_frac <- 2
+all_frac <- 1
 
 wel.vars <- c("WelSurplus", "WelMax", "WelEfficiency", "CEdiff", "Prob")
-wel.var <- wel.vars[1]
+wel.var  <- wel.vars[1]
 
 # Full data plot
 p.eut <- T
@@ -419,10 +524,11 @@ p.pow <- T
 p.inv <- T
 p.pre <- T
 p.all <- T
+p.AB_ALL <- F
 p.cor <- F
 
 p.win <- T
-p.wel <- T
+p.wel <- F
 
 # EUT Subjects
 if (p.eut) {
@@ -430,27 +536,30 @@ if (p.eut) {
 		load(paste0("../data/classify/full/", inst, "-bak.Rda"))
 		FDAT <- get(inst) %>%
 			filter(model == "EUT") %>%
-			select(starts_with("real"), ends_with("CEdiff"), ends_with("Est"),
-			       starts_with("EUT"), starts_with("win"), r, alpha, beta, mu)
+			filter(!is.na(win_01), !is.na(win_05), !is.na(win_10)) %>%
+			select(starts_with("win"), r, mu, model)
 
 #		print(paste0("Number of subjects in EUT Win: ",nrow(FDAT)))
 		p <- plotme(FDAT, "EUT", "r", sfrac = win_frac)
 #		print("saving plot")
-		ggsave(paste0("eut-winners-", inst, ".", dev.type), plot = p, device = dev.type, path = path, width = width, height = height, units = units)
+		ggsave(paste0("eut-winners-", inst, ".", dev.type), plot = p, device = dev.type, path = plot_dir, width = width, height = height, units = units)
 		rm(FDAT, p)
+		rm(list=inst)
 	}
 	if (p.wel) {
 		load(paste0("../data/classify/full/", inst, "-bak.Rda"))
 		FDAT <- get(inst) %>%
 			filter(model == "EUT") %>%
+			filter(!is.na(win_01), !is.na(win_05), !is.na(win_10)) %>%
 			select(starts_with("real"), ends_with("CEdiff"), ends_with("Est"), ends_with(wel.var),
 						starts_with("EUT"), starts_with("win"), r, alpha, beta, mu)
 
 #		print(paste0("Number of subjects in EUT Welfare: ",nrow(FDAT)))
 		p <- plot.wel(FDAT, "EUT", "r", sfrac = wel_frac, wel.var)
 #		print("saving plot")
-		ggsave(paste0("eut-welfare-", inst, ".", dev.type), plot = p, device = dev.type, path = path, width = width, height = height, units = units)
+		ggsave(paste0("eut-welfare-", inst, ".", dev.type), plot = p, device = dev.type, path = plot_dir, width = width, height = height, units = units)
 		rm(FDAT, p)
+		rm(list=inst)
 	}
 }
 
@@ -460,27 +569,30 @@ if (p.pow) {
 		load(paste0("../data/classify/full/", inst, "-bak.Rda"))
 		FDAT <- get(inst) %>%
 			filter(model == "pow") %>%
-			select(starts_with("real"), ends_with("CEdiff"), ends_with("Est"),
-			starts_with("POW"), starts_with("win"), r, alpha, beta, mu)
+			filter(!is.na(win_01), !is.na(win_05), !is.na(win_10)) %>%
+			select(starts_with("win"), r, mu, alpha, model)
 
 #		print(paste0("Number of subjects in POW Win: ",nrow(FDAT)))
 		p <- plotme(FDAT, "POW", "alpha", win_frac)
 #		print("saving plot")
-		ggsave(paste0("pow-winners-", inst, ".", dev.type), plot = p, device = dev.type, path = path, width = width, height = height, units = units)
+		ggsave(paste0("pow-winners-", inst, ".", dev.type), plot = p, device = dev.type, path = plot_dir, width = width, height = height, units = units)
 		rm(FDAT, p)
+		rm(list=inst)
 	}
 	if (p.wel) {
 		load(paste0("../data/classify/full/", inst, "-bak.Rda"))
 		FDAT <- get(inst) %>%
 			filter(model == "pow") %>%
+			filter(!is.na(win_01), !is.na(win_05), !is.na(win_10)) %>%
 			select(starts_with("real"), ends_with("CEdiff"), ends_with("Est"), ends_with(wel.var),
 			starts_with("POW"), starts_with("win"), r, alpha, beta, mu)
 
 #		print(paste0("Number of subjects in POW Welfare: ",nrow(FDAT)))
 		p <- plot.wel(FDAT, "POW", "alpha", wel_frac, wel.var)
 #		print("saving plot")
-		ggsave(paste0("pow-welfare-", inst, ".", dev.type), plot = p, device = dev.type, path = path, width = width, height = height, units = units)
+		ggsave(paste0("pow-welfare-", inst, ".", dev.type), plot = p, device = dev.type, path = plot_dir, width = width, height = height, units = units)
 		rm(FDAT, p)
+		rm(list=inst)
 	}
 }
 
@@ -490,29 +602,32 @@ if (p.inv) {
 		load(paste0("../data/classify/full/", inst, "-bak.Rda"))
 		FDAT <- get(inst) %>%
 			filter(model == "invs") %>%
+			filter(!is.na(win_01), !is.na(win_05), !is.na(win_10)) %>%
 			filter(alpha > .3) %>%
-			select(starts_with("real"), ends_with("CEdiff"), ends_with("Est"),
-			       starts_with("INV"), starts_with("win"), r, alpha, beta, mu)
+			select(starts_with("win"), r, mu, alpha, model)
 
 #		print(paste0("Number of subjects in INV Win: ",nrow(FDAT)))
 		p <- plotme(FDAT, "Inverse S", "alpha", win_frac)
 #		print("saving plot")
-		ggsave(paste0("inv-winners-", inst, ".", dev.type), plot = p, device = dev.type, path = path, width = width, height = height, units = units)
+		ggsave(paste0("inv-winners-", inst, ".", dev.type), plot = p, device = dev.type, path = plot_dir, width = width, height = height, units = units)
 		rm(FDAT, p)
+		rm(list=inst)
 	}
 	if (p.wel) {
 		load(paste0("../data/classify/full/", inst, "-bak.Rda"))
 		FDAT <- get(inst) %>%
 			filter(model == "invs") %>%
-			filter(alpha > 0.4) %>%
+			filter(!is.na(win_01), !is.na(win_05), !is.na(win_10)) %>%
+			filter(alpha > 0.3) %>%
 			select(starts_with("real"), ends_with("CEdiff"), ends_with("Est"), ends_with(wel.var),
 			       starts_with("INV"), starts_with("win"), r, alpha, beta, mu)
 
 #		print(paste0("Number of subjects in INV Wel: ",nrow(FDAT)))
 		p <- plot.wel(FDAT, "Inverse S", "alpha", wel_frac, wel.var)
 #		print("saving plot")
-		ggsave(paste0("inv-welfare-", inst, ".", dev.type), plot = p, device = dev.type, path = path, width = width, height = height, units = units)
+		ggsave(paste0("inv-welfare-", inst, ".", dev.type), plot = p, device = dev.type, path = plot_dir, width = width, height = height, units = units)
 		rm(FDAT, p)
+		rm(list=inst)
 	}
 }
 
@@ -522,19 +637,20 @@ if (p.pre) {
 		load(paste0("../data/classify/full/", inst, "-bak.Rda"))
 		FDAT <- get(inst) %>%
 			filter(model == "prelec") %>%
-			select(starts_with("real"), ends_with("CEdiff"), ends_with("Est"),
-			starts_with("PRE"), starts_with("win"), r, alpha, beta, mu)
+			filter(!is.na(win_01), !is.na(win_05), !is.na(win_10)) %>%
+			select(starts_with("win"), r, mu, alpha, beta, model)
 
 #		print(paste0("Number of subjects in PRE Win: ",nrow(FDAT)))
 		p <- plotme(filter(FDAT, beta > 1.2 | beta < 0.8), "Prelec",    "alpha", win_frac)
 #		print("saving plot")
-		ggsave(paste0("pre-a-winners-", inst, ".", dev.type), plot = p, device = dev.type, path = path, width = width, height = height, units = units)
+		ggsave(paste0("pre-a-winners-", inst, ".", dev.type), plot = p, device = dev.type, path = plot_dir, width = width, height = height, units = units)
 		rm(p)
 		print("Beginning with Prelec winner beta")
 		p <- plotme(filter(FDAT, alpha > 1.2 | alpha < 0.8), "Prelec",    "beta", win_frac)
 #		print("saving plot")
-		ggsave(paste0("pre-b-winners-", inst, ".", dev.type), plot = p, device = dev.type, path = path, width = width, height = height, units = units)
+		ggsave(paste0("pre-b-winners-", inst, ".", dev.type), plot = p, device = dev.type, path = plot_dir, width = width, height = height, units = units)
 		rm(FDAT, p)
+		rm(list=inst)
 	}
 	if (p.wel) {
 		load(paste0("../data/classify/full/", inst, "-bak.Rda"))
@@ -547,13 +663,14 @@ if (p.pre) {
 		print("Beginning with Prelec welfare alpha")
 		p <- plot.wel(FDAT, "Prelec",    "alpha", wel_frac, wel.var)
 #		print("saving plot")
-		ggsave(paste0("pre-a-welfare-", inst, ".", dev.type), plot = p, device = dev.type, path = path, width = width, height = height, units = units)
+		ggsave(paste0("pre-a-welfare-", inst, ".", dev.type), plot = p, device = dev.type, path = plot_dir, width = width, height = height, units = units)
 		rm(p)
 		print("Beginning with Prelec welfare beta")
 		p <- plot.wel(FDAT, "Prelec",    "beta", wel_frac, wel.var)
 #		print("saving plot")
-		ggsave(paste0("pre-b-welfare-", inst, ".", dev.type), plot = p, device = dev.type, path = path, width = width, height = height, units = units)
+		ggsave(paste0("pre-b-welfare-", inst, ".", dev.type), plot = p, device = dev.type, path = plot_dir, width = width, height = height, units = units)
 		rm(FDAT, p)
+		rm(list=inst)
 	}
 }
 
@@ -562,30 +679,68 @@ if (p.all) {
 	if(p.win) {
 		load(paste0("../data/classify/full/", inst, "-bak.Rda"))
 		FDAT <- get(inst) %>%
+			filter(!is.na(win_01), !is.na(win_05), !is.na(win_10)) %>%
 			filter((alpha < 2 & alpha > 1.2 | alpha < 0.8) | is.na(alpha),
 						(beta < 2 & beta > 1.2 | beta < 0.8) | is.na(beta) ) %>%
+			select(starts_with("win"), mu, model) %>%
 			sample_frac(all_frac)
 
-		#print(paste0("Number of subjects in results: ",nrow(FDAT)))
+			#select(starts_with("win"), r, alpha, beta, mu) %>%
 
 		p <- allmu(FDAT, win_frac)
 #				print("saving plot")
-		ggsave(paste0("mu-winners-", inst, ".", dev.type), plot = p, device = dev.type, path = path, width = width, height = height, units = units)
+		ggsave(paste0("mu-winners-", inst, ".", dev.type), plot = p, device = dev.type, path = plot_dir, width = width, height = height, units = units)
 		rm(FDAT, p)
+		rm(list=inst)
 	}
 	if(p.wel) {
 		load(paste0("../data/classify/full/", inst, "-bak.Rda"))
 		FDAT <- get(inst) %>%
+			filter(!is.na(win_01), !is.na(win_05), !is.na(win_10)) %>%
 			filter((alpha < 2 & alpha > 1.2 | alpha < 0.8) | is.na(alpha),
 						(beta < 2 & beta > 1.2 | beta < 0.8) | is.na(beta) ) %>%
 			sample_frac(all_frac)
 
-		#print(paste0("Number of subjects in results: ",nrow(FDAT)))
+		p <- all.wel(FDAT, win_frac, wel.var)
+#				print("saving plot")
+		ggsave(paste0("mu-welfare-", inst, ".", dev.type), plot = p, device = dev.type, path = plot_dir, width = width, height = height, units = units)
+		rm(FDAT, p)
+		rm(list=inst)
+	}
+}
+
+# P_AB
+if (p.AB_ALL) {
+	if(p.win) {
+		load(paste0("../data/classify/full/", inst, "-bak.Rda"))
+		FDAT <- get(inst) %>%
+			filter(!is.na(win_01), !is.na(win_05), !is.na(win_10)) %>%
+			filter((alpha < 2 & alpha > 1.2 | alpha < 0.8) | is.na(alpha),
+						(beta < 2 & beta > 1.2 | beta < 0.8) | is.na(beta) ) %>%
+			select(starts_with("win"), mu, model) %>%
+			sample_frac(all_frac)
+
+			#select(starts_with("win"), r, alpha, beta, mu) %>%
+
+		p <- P_AB_ALL(FDAT, win_frac)
+#				print("saving plot")
+		ggsave(paste0("P_AB-winners-", inst, ".", dev.type), plot = p, device = dev.type, path = plot_dir, width = width, height = height, units = units)
+		rm(FDAT, p)
+		rm(list=inst)
+	}
+	if(p.wel) {
+		load(paste0("../data/classify/full/", inst, "-bak.Rda"))
+		FDAT <- get(inst) %>%
+			filter(!is.na(win_01), !is.na(win_05), !is.na(win_10)) %>%
+			filter((alpha < 2 & alpha > 1.2 | alpha < 0.8) | is.na(alpha),
+						(beta < 2 & beta > 1.2 | beta < 0.8) | is.na(beta) ) %>%
+			sample_frac(all_frac)
 
 		p <- all.wel(FDAT, win_frac, wel.var)
 #				print("saving plot")
-		ggsave(paste0("mu-welfare-", inst, ".", dev.type), plot = p, device = dev.type, path = path, width = width, height = height, units = units)
+		ggsave(paste0("mu-welfare-", inst, ".", dev.type), plot = p, device = dev.type, path = plot_dir, width = width, height = height, units = units)
 		rm(FDAT, p)
+		rm(list=inst)
 	}
 }
 
@@ -602,12 +757,13 @@ results <- get(inst) %>%
 
 p <- correct(results)
 #		print("saving plot")
-ggsave(paste0("correct-winners-", inst, ".", dev.type), plot = p, device = dev.type, path = path, width = width, height = height, units = units)
+ggsave(paste0("correct-winners-", inst, ".", dev.type), plot = p, device = dev.type, path = plot_dir, width = width, height = height, units = units)
 rm(FDAT, p)
 }
 }
 
 instruments <- c("HNG", "HNG_1", "HO", "LMS20", "LMS30", "SH")
+instruments <- c("HNG_1")
 
 for(i in instruments) {
 	per_inst(i)
