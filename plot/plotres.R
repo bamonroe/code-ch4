@@ -3,6 +3,7 @@ library(ggplot2)
 library(cowplot)
 library(MSL)
 
+theme_set(theme_grey())
 
 plotme <- function(dat, mod, par, sfrac) {
 	print(paste("Plotting Winners"))
@@ -449,7 +450,7 @@ all.wel <- function(dat, sfrac, wel.var) {
 	return(p)
 }
 
-welfare5 <- function(dat, mod, par, sfrac, wel.var, legpos = "none") {
+welfare5 <- function(dat, mod, par, sfrac, wel.var, legpos = "none", doinv = T) {
 
 	#dbug <- 1
 	#print(paste("here:", dbug)) ; dbug <- dbug + 1
@@ -483,10 +484,12 @@ welfare5 <- function(dat, mod, par, sfrac, wel.var, legpos = "none") {
 
 	dat05$cor <- ifelse(dat$win_05 == "INV", dat[[paste0("INV_", wel.var)]], NA)
 
+	if (doinv) {
 	dat.inv <- dat05
 	dat.inv$mod <- 3
 	dat.inv <- dat.inv %>%
 		sample_frac(sfrac)
+	}
 
 	dat05$cor <- ifelse(dat$win_05 == "PRE", dat[[paste0("PRE_", wel.var)]], NA)
 
@@ -495,18 +498,26 @@ welfare5 <- function(dat, mod, par, sfrac, wel.var, legpos = "none") {
 	dat.pre <- dat.pre %>%
 		sample_frac(sfrac)
 
-	dat <- rbind(dat.eut, dat.pow, dat.inv, dat.pre)
-	dat$mod <- factor(dat$mod, 1:4, labels = c("EUT", "RDU Power", "RDU Inverse-S", "RDU Prelec"))
+	if (doinv) {
+		dat <- rbind(dat.eut, dat.pow, dat.inv, dat.pre)
+		dat$mod <- factor(dat$mod, 1:4, labels = c("EUT", "RDU Power", "RDU Inverse-S", "RDU Prelec"))
+	} else {
+		dat <- rbind(dat.eut, dat.pow, dat.pre)
+		dat$mod <- factor(dat$mod, c(1,2,4), labels = c("EUT", "RDU Power", "RDU Prelec"))
+	}
 
 	dat$mugrp <- 0
 	dat$mugrp <- ifelse(dat$mu < .1, 1, dat$mugrp)
 	dat$mugrp <- ifelse(dat$mu < .2 & dat$mugrp ==0, 2, dat$mugrp)
 	dat$mugrp <- ifelse(dat$mu < .3 & dat$mugrp ==0, 3, dat$mugrp)
-	dat$mugrp <- factor(dat$mugrp, levels=1:3, labels=c("0.01 < mu < 0.1", "0.1 < mu < 0.2", "0.2 < mu < 0.3"))
+	dat$mugrp <- factor(dat$mugrp, levels=1:3, 
+											labels=c(latex2exp::TeX("$0.01\\, <\\, \\lambda\\, <\\, 0.1$", output = "text"),
+															 latex2exp::TeX("$0.1\\, <\\, \\lambda\\, <\\, 0.2$",  output = "text"),
+															 latex2exp::TeX("$0.2\\, <\\, \\lambda\\, <\\, 0.3$",  output = "text")))
 
 	# Take the difference between the estimate and the real values for the welfare metric
 	dat$cor <- dat$cor - dat[[paste0("real_", wel.var)]]
-	dat$cor <- abs(dat$cor)
+	#dat$cor <- abs(dat$cor)
 	# Reduce the final datafram as much as possible, its duplicated once and the entire dataframe is saved
 	# in the plot. This can really chow RAM, so only keep the variables needed for the plot.
 
@@ -517,9 +528,10 @@ welfare5 <- function(dat, mod, par, sfrac, wel.var, legpos = "none") {
 	rows <- nrow(dat)
 
 	print(paste("Now plotting", mod, "with", rows, "rows"))
+
 	p <- ggplot(dat, aes_string(x = par, y = "cor"))
-	p <- p + facet_grid(mugrp~., scales = "free_y")
-	#p <- p + facet_grid(~mugrp, scales = "free_y")
+	p <- p + facet_grid(mugrp~., scales = "free_y", labeller = label_parsed)
+#	p <- p + geom_point(aes(color = mod), alpha = 0.1)
 	p <- p + geom_smooth(span = 0.15, aes(color = mod))
 	p <- p + labs(title = paste(mod, "Subjects"), x = paste(par, "Value"), y = paste("Absolute Value of Estimated", wel.var, "- Real", wel.var), color = "Classified Model")
 	p <- p + theme(plot.title = element_text(hjust = 0.5), legend.position = legpos)
@@ -590,7 +602,7 @@ print(paste("Plotting for instrument", inst))
 dev.type <- "pdf"
 width   <- 10
 height  <- 8.88
-width5  <- 4.5
+width5  <- 5.5
 height5 <- 11
 units <- "in"
 plot_dir <- "../plots/"
@@ -606,12 +618,15 @@ wel.var  <- wel.vars[1]
 p.eut <- F
 p.pow <- F
 p.inv <- F
-p.pre <- T
+p.pre <- F
 p.all <- F
 p.AB_ALL <- F
 p.cor <- F
 
-p.allwell <- T
+p.eut_pre <- T
+p.pow_inv <- T
+p.prewel5 <- F
+p.eutwel5 <- F
 
 p.win <- F
 p.wel <- F
@@ -748,10 +763,11 @@ if (p.inv) {
 		FDAT <- get(inst) %>%
 			filter(model == "invs") %>%
 			filter(!is.na(win_01), !is.na(win_05), !is.na(win_10)) %>%
+			filter(alpha > 0.3) %>%
 			select(starts_with("real"), ends_with("Est"), ends_with(wel.var),
 			       starts_with("INV"), starts_with("win"), r, alpha, mu)
 
-		p <- welfare5(FDAT, "Inverse S", "alpha", sfrac = wel_frac, wel.var)
+		p <- welfare5(FDAT, "Inverse S", "alpha", sfrac = wel_frac, wel.var, legpos = "right")
 		ggsave(paste0("inv-welfare5-", inst, ".", dev.type), plot = p, device = dev.type, path = plot_dir, width = width5, height = height5, units = units)
 
 		rm(FDAT, p)
@@ -910,7 +926,7 @@ rm(FDAT, p)
 }
 
 # All Welfare
-if (p.allwell) {
+if (p.eut_pre) {
 
 		load(paste0("../data/classify/full/", inst, "-bak.Rda"))
 		FDAT <- get(inst) %>%
@@ -919,31 +935,7 @@ if (p.allwell) {
 			select(starts_with("real"), ends_with("CEdiff"), ends_with("Est"), ends_with(wel.var),
 						starts_with("EUT"), starts_with("win"), r, mu)
 
-		p.eut <- welfare5(FDAT, "EUT", "r", sfrac = wel_frac, wel.var, legpos = "right")
-
-		rm(FDAT)
-
-		load(paste0("../data/classify/full/", inst, "-bak.Rda"))
-		FDAT <- get(inst) %>%
-			filter(model == "pow") %>%
-			filter(!is.na(win_01), !is.na(win_05), !is.na(win_10)) %>%
-			select(starts_with("real"), ends_with("Est"), ends_with(wel.var),
-			       starts_with("POW"), starts_with("win"), r, alpha, mu)
-
-		p.pow <- welfare5(FDAT, "POW", "alpha", sfrac = wel_frac, wel.var)
-
-		rm(FDAT)
-
-		load(paste0("../data/classify/full/", inst, "-bak.Rda"))
-		FDAT <- get(inst) %>%
-			filter(model == "invs") %>%
-			filter(alpha > 0.3) %>%
-			filter(!is.na(win_01), !is.na(win_05), !is.na(win_10)) %>%
-			select(starts_with("real"), ends_with("Est"), ends_with(wel.var),
-			       starts_with("INV"), starts_with("win"), r, alpha, mu)
-
-		p.inv <- welfare5(FDAT, "Inverse S", "r", sfrac = wel_frac, wel.var)
-
+		p.eut <- welfare5(FDAT, "EUT", "r", sfrac = wel_frac, wel.var, legpos = "right", doinv = F)
 		rm(FDAT)
 
 		load(paste0("../data/classify/full/", inst, "-bak.Rda"))
@@ -953,15 +945,12 @@ if (p.allwell) {
 			starts_with("PRE"), starts_with("win"), r, alpha, beta, mu)
 
 		print("Beginning with Prelec welfare5 alpha")
-		#p.prea <- welfare5(filter(FDAT, beta > 1.2 | beta < 0.8), "Prelec", "alpha", sfrac = wel_frac, wel.var)
-		p.prea <- welfare5(FDAT, "Prelec", "alpha", sfrac = wel_frac, wel.var)
+		p.prea <- welfare5(filter(FDAT, beta > 1.2 | beta < 0.8), "Prelec", "alpha", sfrac = wel_frac, wel.var, doinv = F)
 
 		print("Beginning with Prelec welfare5 beta")
-		#p.preb <- welfare5(filter(FDAT, alpha > 1.2 | alpha < 0.8), "Prelec", "beta", sfrac = wel_frac, wel.var)
-		p.preb <- welfare5(FDAT, "Prelec", "beta", sfrac = wel_frac, wel.var)
+		p.preb <- welfare5(filter(FDAT, alpha > 1.2 | alpha < 0.8), "Prelec", "beta", sfrac = wel_frac, wel.var, doinv = F)
 
 		rm(FDAT)
-
 		rm(list=inst)
 
 		legend <- get_legend(p.eut)
@@ -970,31 +959,124 @@ if (p.allwell) {
 
 		theme_set(theme_grey())
 
-		mm <- plot_grid(p.pow + ylab("") + theme(strip.background = element_blank(), strip.text.y = element_blank()), 
-		                p.inv + ylab("") + theme(strip.background = element_blank(), strip.text.y = element_blank()),
-		                p.prea + ylab("") + theme(strip.background = element_blank(), strip.text.y = element_blank()),
-		                ncol = 3)
-
 		# Join the middle and left side with the y axis lable
 		mm <- plot_grid(p.eut + theme(legend.position = "none", strip.background = element_blank(), strip.text.y = element_blank()), 
-										mm,
-										ncol = 2,
-										rel_widths = c(1.05, 3)
-										)
-
-		# Join with the right side and the facet labels
-		mm <- plot_grid(mm,
+		                p.prea + ylab("") + theme(strip.background = element_blank(), strip.text.y = element_blank()),
 		                p.preb + ylab(""),
-										ncol = 2,
-										rel_widths = c(4.1, 1.1))
+										ncol = 3,
+										rel_widths = c(1.05, 1, 1.1)
+										)
 
 		# Set the default theme
 		#theme_set(theme_grey())
 
 		# Join the actual plots with the legend
-		mm <- plot_grid(mm, legend, ncol =2 , rel_widths = c(1.2, .1))
+		mm <- plot_grid(mm, legend, ncol =2 , rel_widths = c(1.2, .15))
 
-		cowplot::save_plot("../plots/welfare5.pdf", mm, device = "pdf", base_aspect_ratio = 2, base_height = 10)
+		cowplot::save_plot("../plots/ep-welfare5.pdf", mm, device = "pdf", base_aspect_ratio = 1.4, base_height = 10)
+}
+
+if (p.pow_inv) {
+
+		load(paste0("../data/classify/full/", inst, "-bak.Rda"))
+		FDAT <- get(inst) %>%
+			filter(model == "pow") %>%
+			filter(!is.na(win_01), !is.na(win_05), !is.na(win_10)) %>%
+			select(starts_with("real"), ends_with("Est"), ends_with(wel.var),
+						starts_with("POW"), starts_with("win"), r, alpha, mu)
+
+		print("Beginning with Power welfare5")
+		p.pow <- welfare5(FDAT, "Power", "alpha", sfrac = wel_frac, wel.var, legpos = "right", doinv = T)
+		rm(FDAT)
+
+		load(paste0("../data/classify/full/", inst, "-bak.Rda"))
+		FDAT <- get(inst) %>%
+			filter(model == "invs") %>%
+			filter(!is.na(win_01), !is.na(win_05), !is.na(win_10)) %>%
+			select(starts_with("real"), ends_with("Est"), ends_with(wel.var),
+						starts_with("INV"), starts_with("win"), r, alpha, mu)
+
+		print("Beginning with Inverse S welfare5")
+		p.inv <- welfare5(FDAT, "Inverse S", "alpha", sfrac = wel_frac, wel.var, doinv = T)
+
+		rm(FDAT)
+		rm(list=inst)
+
+		legend <- get_legend(p.pow)
+
+		theme_set(theme_grey())
+
+		# Join the middle and left side with the y axis lable
+		mm <- plot_grid(p.pow + theme(legend.position = "none", strip.background = element_blank(), strip.text.y = element_blank()), 
+										p.inv + ylab(""),
+										ncol = 2,
+										rel_widths = c(1.05, 1.1)
+										)
+
+		# Set the default theme
+		#theme_set(theme_grey())
+
+		# Join the actual plots with the legend
+		mm <- plot_grid(mm, legend, ncol =2 , rel_widths = c(1.2, .15))
+
+		cowplot::save_plot("../plots/pi-welfare5.pdf", mm, device = "pdf", base_aspect_ratio = 1.4, base_height = 10)
+}
+
+if (p.prewel5) {
+
+		load(paste0("../data/classify/full/", inst, "-bak.Rda"))
+		FDAT <- get(inst) %>%
+			filter(model == "prelec") %>%
+			select(starts_with("real"), ends_with("Est"), ends_with(wel.var),
+			starts_with("PRE"), starts_with("win"), r, alpha, beta, mu)
+
+
+		print("Beginning with Prelec welfare5 alpha")
+		p.prea <- welfare5(filter(FDAT, beta > 1.2 | beta < 0.8), "Prelec", "alpha", sfrac = wel_frac, wel.var, legpos = "bottom", doinv = F)
+
+		print("Beginning with Prelec welfare5 beta")
+		p.preb <- welfare5(filter(FDAT, alpha > 1.2 | alpha < 0.8), "Prelec", "beta", sfrac = wel_frac, wel.var, doinv = F)
+
+		rm(FDAT)
+
+		rm(list=inst)
+
+		legend <- get_legend(p.prea)
+
+		theme_set(theme_grey())
+
+		mm <- plot_grid(p.prea + theme(legend.position = "none", strip.background = element_blank(), strip.text.y = element_blank()),
+		                p.preb + ylab(""),
+		                ncol = 2,
+										rel_widths = c(1.05 ,1.1)
+										)
+
+		#theme_set(theme_grey())
+
+		# Join the actual plots with the legend
+		#mm <- plot_grid(mm, legend, ncol =2 , rel_widths = c(1, .2))
+		mm <- plot_grid(mm, legend, nrow =2 , rel_heights = c(1, .05))
+
+		cowplot::save_plot("../plots/pre-welfare5.pdf", mm, device = "pdf", base_aspect_ratio = 1, base_height = 9)
+}
+
+if (p.eutwel5) {
+
+		load(paste0("../data/classify/full/", inst, "-bak.Rda"))
+		FDAT <- get(inst) %>%
+			filter(model == "EUT") %>%
+			select(starts_with("real"), ends_with("Est"), ends_with(wel.var),
+			starts_with("EUT"), starts_with("win"), r, mu)
+
+		print("Beginning with EUT welfare5 r")
+
+		p <- welfare5(FDAT, "EUT", "r", sfrac = wel_frac, wel.var, legpos = "bottom", doinv = F)
+
+		ggsave(paste0("eut-welfare5-", inst, ".", dev.type), plot = p, device = dev.type, path = plot_dir, width = width5, height = height5, units = units)
+
+		rm(FDAT)
+		rm(list=inst)
+
 }
 
 }

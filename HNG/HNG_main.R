@@ -1,10 +1,10 @@
 library(ctools)
 c.library("MSL", "welfare", "dplyr")
 
-do.clean    <- T
-do.estimate <- T
-do.format   <- T
-do.common   <- T
+do.clean    <- F
+do.estimate <- F
+do.format   <- F
+do.common   <- F
 do.wel      <- T
 do.plots    <- T
 

@@ -50,6 +50,4 @@ if (exists("pvals")) {
 	mm
 	cowplot::save_plot("../plots/HNG_pvals.pdf", mm, device = "pdf", base_aspect_ratio = 2, base_height = 6)
 
-	ggsave(filename = "../plots/HNG_pvals.pdf", plot = r, device = "pdf")
-
 }
