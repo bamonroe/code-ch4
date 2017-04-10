@@ -1,10 +1,13 @@
 library(dplyr)
 
 instruments <- c("HNG", "HNG_1", "HO", "LMS20", "LMS30", "SH")
+instruments <- c("HNG_1")
 data_dir    <- "../data/classify/full/"
 load_suffix <- "-bak.Rda"
 save_suff   <- "-mini.Rda"
 
+wel.vars <- c("WelSurplus", "WelMax", "WelEfficiency", "CEdiff", "Prob")
+wel.var  <- wel.vars[1]
 
 for (inst in instruments) {
 print(inst)
@@ -20,28 +23,32 @@ nn <- 1
 tmp1 <- tmp %>%
 	filter(!is.na(win_05)) %>%
 	filter(model == "EUT") %>%
-	select(starts_with("win"), r, mu, alpha, beta, model) %>%
+	select(starts_with("win"), starts_with("real"), ends_with(wel.var),
+				 r, mu, alpha, beta, model) %>%
 	sample_frac(nn)
 	#sample_n(nn)
 
 tmp2 <- tmp %>%
 	filter(!is.na(win_05)) %>%
 	filter(model == "pow") %>%
-	select(starts_with("win"), r, mu, alpha, beta, model) %>%
+	select(starts_with("win"), starts_with("real"), ends_with(wel.var),
+				 r, mu, alpha, beta, model) %>%
 	sample_frac(nn)
 	#sample_n(nn)
 
 tmp3 <- tmp %>%
 	filter(!is.na(win_05)) %>%
 	filter(model == "invs") %>%
-	select(starts_with("win"), r, mu, alpha, beta, model) %>%
+	select(starts_with("win"), starts_with("real"), ends_with(wel.var),
+				 r, mu, alpha, beta, model) %>%
 	sample_frac(nn)
 	#sample_n(nn)
 
 tmp4 <- tmp %>%
 	filter(!is.na(win_05)) %>%
 	filter(model == "prelec") %>%
-	select(starts_with("win"), r, mu, alpha, beta, model) %>%
+	select(starts_with("win"), starts_with("real"), ends_with(wel.var),
+				 r, mu, alpha, beta, model) %>%
 	sample_frac(nn)
 	#sample_n(nn)
 

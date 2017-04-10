@@ -6,7 +6,7 @@ instruments <- c("HNG", "HNG_1", "HO", "LMS20", "LMS30", "SH")
 instruments <- c("HNG_1")
 fit_dir    <- "../data/lo_fits/"
 load_suffix  <- "_loess-mini.Rda"
-load_suffix  <- "_loess-gam.Rda"
+load_suffix  <- "_gam-gam.Rda"
 save_suffix <- "-win.Rda"
 
 # mvhnorm is a multi-variate normal distribution using halton draws
@@ -134,26 +134,46 @@ who_won <- function(lo_obj, HH, props) {
 	lo_names <- names(lo_obj)
 
 	predictions <- lapply(lo_names, function(mname, HH, props) {
-		pdat <- mk_pop(mname, HH, props)
-		pdat[[paste0(mname,"_EUT")]] <- predict(lo_obj[[mname]][["EUT"]], pdat)
-		pdat[[paste0(mname,"_POW")]] <- predict(lo_obj[[mname]][["POW"]], pdat)
-		pdat[[paste0(mname,"_INV")]] <- predict(lo_obj[[mname]][["INV"]], pdat)
-		pdat[[paste0(mname,"_PRE")]] <- predict(lo_obj[[mname]][["PRE"]], pdat)
-		pdat
+		pop <- mk_pop(mname, HH, props)
+		pdat <- pop
+		wdat <- pop
+
+		pdat[[paste0(mname,"_EUT")]] <- predict(lo_obj[[mname]][["EUT"]][["prob"]], pop)
+		pdat[[paste0(mname,"_POW")]] <- predict(lo_obj[[mname]][["POW"]][["prob"]], pop)
+		pdat[[paste0(mname,"_INV")]] <- predict(lo_obj[[mname]][["INV"]][["prob"]], pop)
+		pdat[[paste0(mname,"_PRE")]] <- predict(lo_obj[[mname]][["PRE"]][["prob"]], pop)
+
+		wdat[[paste0(mname,"_EUT_wel")]] <- predict(lo_obj[[mname]][["EUT"]][["wel"]], pop)
+		wdat[[paste0(mname,"_POW_wel")]] <- predict(lo_obj[[mname]][["POW"]][["wel"]], pop)
+		wdat[[paste0(mname,"_INV_wel")]] <- predict(lo_obj[[mname]][["INV"]][["wel"]], pop)
+		wdat[[paste0(mname,"_PRE_wel")]] <- predict(lo_obj[[mname]][["PRE"]][["wel"]], pop)
+
+		list(prob = pdat, wel = wdat)
 	}, HH = HH, props = props)
 
-	pred_sums <- lapply(predictions, function(pdat) {
-		eut <- pdat %>% select(ends_with("EUT")) %>% sum(na.rm = T)
-		pow <- pdat %>% select(ends_with("POW")) %>% sum(na.rm = T)
-		inv <- pdat %>% select(ends_with("INV")) %>% sum(na.rm = T)
-		pre <- pdat %>% select(ends_with("PRE")) %>% sum(na.rm = T)
+	pred_sums <- lapply(predictions, function(dat) {
+		eut <- dat$prob %>% select(ends_with("EUT")) %>% sum(na.rm = T)
+		pow <- dat$prob %>% select(ends_with("POW")) %>% sum(na.rm = T)
+		inv <- dat$prob %>% select(ends_with("INV")) %>% sum(na.rm = T)
+		pre <- dat$prob %>% select(ends_with("PRE")) %>% sum(na.rm = T)
+		data.frame(EUT = eut, POW = pow, INV = inv, PRE = pre)
+	}) 
+
+	wel_sums <- lapply(predictions, function(dat) {
+		eut <- dat$wel %>% select(ends_with("EUT_wel")) %>% sum(na.rm = T)
+		pow <- dat$wel %>% select(ends_with("POW_wel")) %>% sum(na.rm = T)
+		inv <- dat$wel %>% select(ends_with("INV_wel")) %>% sum(na.rm = T)
+		pre <- dat$wel %>% select(ends_with("PRE_wel")) %>% sum(na.rm = T)
 		data.frame(EUT = eut, POW = pow, INV = inv, PRE = pre)
 	}) 
 
 	pred_mat <- do.call(rbind, pred_sums)
 	rownames(pred_mat) <- paste(colnames(pred_mat), "subjects")
 
-	list(predictions = predictions, pred_sums = pred_mat)
+	wel_mat <- do.call(rbind, wel_sums)
+	rownames(wel_mat) <- paste(colnames(wel_mat), "subjects")
+
+	list(predictions = predictions, pred_sums = pred_mat, wel_sums = wel_mat)
 }
 
 cond_probs <- function(wmat) {
@@ -236,7 +256,7 @@ for (inst in instruments) {
 
 	load(paste0(fit_dir, inst, load_suffix))
 
-	mod_fit <- get(paste0(inst, "_loess"))
+	mod_fit <- get(paste0(inst, "_gam"))
 
 	#list(predictions = predictions, pred_sums = pred_mat)
 	winners <- who_won(mod_fit, HH, props)
@@ -245,7 +265,14 @@ for (inst in instruments) {
 	cat("\nConditional Probability Information\n")
 	print(lapply(cprobs, round, digits = 3))
 
-	save(winners, cprobs, file = paste0(fit_dir, inst, save_suffix))
+	welprob <- list()
+	welprob$wel_sums <- winners$wel_sums / HH
+	welprob$P_BA     <- ((winners$wel_sums / HH) * cprobs$P_BA) %>% rowSums
+	welprob$P_AB     <- ((winners$wel_sums / HH) * cprobs$P_AB) %>% colSums
+	
+	print(lapply(welprob, round, digits = 3))
+
+	save(winners, cprobs, welprob, file = paste0(fit_dir, inst, save_suffix))
 
 }
 

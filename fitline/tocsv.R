@@ -32,4 +32,16 @@ for (inst in instruments) {
 	write.csv(PBA, file = paste0(table_dir, inst, "-PBA", save_suffix), quote = F, row.names = F)
 	write.csv(PAB, file = paste0(table_dir, inst, "-PAB", save_suffix), quote = F, row.names = F)
 
+	wsum <- round(welprob$wel_sums, digits = 3)
+	PBA  <- round(welprob$P_BA,     digits = 3)
+	PAB  <- round(welprob$P_AB,     digits = 3)
+
+	wsum <- cbind(rnames = rnames, wsum)
+	PBA  <- t(PBA)
+	PAB  <- t(PAB)
+
+	write.csv(wsum, file = paste0(table_dir, inst, "-wsum",  save_suffix), quote = F, row.names = F)
+	write.csv(PBA,  file = paste0(table_dir, inst, "-PBA-wel", save_suffix), quote = F, row.names = F)
+	write.csv(PAB,  file = paste0(table_dir, inst, "-PAB-wel", save_suffix), quote = F, row.names = F)
+
 }

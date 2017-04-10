@@ -9,7 +9,10 @@ load_suffix <- "-bak.Rda"
 load_suffix <- "-mini.Rda"
 save_suffix <- "-gam.Rda"
 
-fit_lo <- function(dat, mod, win) {
+wel.vars <- c("WelSurplus", "WelMax", "WelEfficiency", "CEdiff", "Prob")
+wel.var  <- wel.vars[1]
+
+fit_gam <- function(dat, mod, win, wel) {
 
 	dat <- dat %>%
 		filter(model == mod)
@@ -19,19 +22,37 @@ fit_lo <- function(dat, mod, win) {
 	dat <- dat %>%
 		filter(!is.na(win_05))
 
-	print(paste(mod, "as", win, ":", sum(dat$win_05), "; Not NA:", nrow(dat)))
+	cat("\n")
+	cat(paste(mod, "as", win, ":", sum(dat$win_05), "; Not NA:", nrow(dat), "\n"))
 
+	cat("\tFitting Probability\n")
 	if (mod == "EUT") {
-		hfit <- gam(win_05 ~ s(r) + s(mu), data = dat)
+		pfit <- gam(win_05 ~ s(r) + s(mu), data = dat)
 	} else if ((mod == "pow") | (mod == "invs")) {
-		hfit <- gam(win_05 ~ s(r) + s(alpha) + s(r, alpha) + s(mu), data = dat)
+		pfit <- gam(win_05 ~ s(r) + s(alpha) + s(r, alpha) + s(mu), data = dat)
 	} else if (mod == "prelec") {
-		hfit <- gam(win_05 ~ s(r) + s(alpha) + s(beta) + s(alpha, beta)+ s(r, alpha, beta) + s(mu), data = dat)
+		pfit <- gam(win_05 ~ s(r) + s(alpha) + s(beta) + s(alpha, beta)+ s(r, alpha, beta) + s(mu), data = dat)
 	} else {
 		stop("Not a correct model")
 	}
 
-	return(hfit)
+	dat <- dat %>%
+		filter(win_05 == 1)
+
+	dat$wel <- dat[[paste0(win, "_", wel)]] - dat[[paste0("real_", wel)]]
+
+	cat("\tFitting Welfare\n")
+	if (mod == "EUT") {
+		wfit <- gam(wel ~ s(r) + s(mu), data = dat)
+	} else if ((mod == "pow") | (mod == "invs")) {
+		wfit <- gam(wel ~ s(r) + s(alpha) + s(r, alpha) + s(mu), data = dat)
+	} else if (mod == "prelec") {
+		wfit <- gam(wel ~ s(r) + s(alpha) + s(beta) + s(alpha, beta)+ s(r, alpha, beta) + s(mu), data = dat)
+	} else {
+		stop("Not a correct model")
+	}
+
+	return(list(prob = pfit, wel = wfit))
 }
 
 for (inst in instruments) {
@@ -43,28 +64,28 @@ for (inst in instruments) {
 	# Load the instrument into a known var
 	idat <- get(inst)
 
-	loess_fits <- list()
+	gam_fits <- list()
 
-	loess_fits$EUT <- list(EUT = fit_lo(idat, "EUT", "EUT"),
-	                       POW = fit_lo(idat, "EUT", "POW"),
-	                       INV = fit_lo(idat, "EUT", "INV"),
-	                       PRE = fit_lo(idat, "EUT", "PRE"))
-	loess_fits$POW <- list(EUT = fit_lo(idat, "pow", "EUT"),
-	                       POW = fit_lo(idat, "pow", "POW"),
-	                       INV = fit_lo(idat, "pow", "INV"),
-	                       PRE = fit_lo(idat, "pow", "PRE"))
-	loess_fits$INV <- list(EUT = fit_lo(idat, "invs", "EUT"),
-	                       POW = fit_lo(idat, "invs", "POW"),
-	                       INV = fit_lo(idat, "invs", "INV"),
-	                       PRE = fit_lo(idat, "invs", "PRE"))
-	loess_fits$PRE <- list(EUT = fit_lo(idat, "prelec", "EUT"),
-	                       POW = fit_lo(idat, "prelec", "POW"),
-	                       INV = fit_lo(idat, "prelec", "INV"),
-	                       PRE = fit_lo(idat, "prelec", "PRE"))
+	gam_fits$EUT <- list(EUT = fit_gam(idat, "EUT",    "EUT", wel.var),
+	                     POW = fit_gam(idat, "EUT",    "POW", wel.var),
+	                     INV = fit_gam(idat, "EUT",    "INV", wel.var),
+	                     PRE = fit_gam(idat, "EUT",    "PRE", wel.var))
+	gam_fits$POW <- list(EUT = fit_gam(idat, "pow",    "EUT", wel.var),
+	                     POW = fit_gam(idat, "pow",    "POW", wel.var),
+	                     INV = fit_gam(idat, "pow",    "INV", wel.var),
+	                     PRE = fit_gam(idat, "pow",    "PRE", wel.var))
+	gam_fits$INV <- list(EUT = fit_gam(idat, "invs",   "EUT", wel.var),
+	                     POW = fit_gam(idat, "invs",   "POW", wel.var),
+	                     INV = fit_gam(idat, "invs",   "INV", wel.var),
+	                     PRE = fit_gam(idat, "invs",   "PRE", wel.var))
+	gam_fits$PRE <- list(EUT = fit_gam(idat, "prelec", "EUT", wel.var),
+	                     POW = fit_gam(idat, "prelec", "POW", wel.var),
+	                     INV = fit_gam(idat, "prelec", "INV", wel.var),
+	                     PRE = fit_gam(idat, "prelec", "PRE", wel.var))
 
-	fit_name <- paste0(inst, "_loess")
+	fit_name <- paste0(inst, "_gam")
 
-	assign(fit_name, loess_fits)
+	assign(fit_name, gam_fits)
 
 	save(list=fit_name, file=paste0(fit_dir, fit_name, save_suffix))
 	cat("\n")
