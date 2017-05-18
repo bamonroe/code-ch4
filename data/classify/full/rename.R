@@ -1,5 +1,6 @@
 library(MSL)
 insts <- c("HNG", "HNG_1", "HO", "LMS20", "LMS30", "SH")
+insts <- c("HNG", "HNG_1")
 
 for (inst in insts) {
 	print(paste("Starting", inst))

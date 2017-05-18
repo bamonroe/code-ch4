@@ -482,13 +482,14 @@ welfare5 <- function(dat, mod, par, sfrac, wel.var, legpos = "none", doinv = T) 
 	dat.pow <- dat.pow %>%
 		sample_frac(sfrac)
 
+	if (doinv) {
 	dat05$cor <- ifelse(dat$win_05 == "INV", dat[[paste0("INV_", wel.var)]], NA)
 
-	if (doinv) {
 	dat.inv <- dat05
 	dat.inv$mod <- 3
 	dat.inv <- dat.inv %>%
 		sample_frac(sfrac)
+
 	}
 
 	dat05$cor <- ifelse(dat$win_05 == "PRE", dat[[paste0("PRE_", wel.var)]], NA)
@@ -524,6 +525,28 @@ welfare5 <- function(dat, mod, par, sfrac, wel.var, legpos = "none", doinv = T) 
 	dat <- dat %>%
 		select_(par, "cor", "mod", "mugrp") %>%
 		filter(!is.na(cor))
+
+	if ((mod == "Prelec") & (par == "alpha") & doinv) {
+
+	dat %>%
+		filter(mod == "EUT") %>%
+		summary %>% print
+
+	dat %>%
+		filter(mod == "RDU Power") %>%
+		summary %>% print
+
+	dat %>%
+		filter(mod == "RDU Inverse-S") %>%
+		summary %>% print
+
+	dat %>%
+		filter(mod == "RDU Prelec") %>%
+		summary %>% print
+
+	}
+
+
 
 	rows <- nrow(dat)
 
@@ -624,7 +647,7 @@ p.AB_ALL <- F
 p.cor <- F
 
 p.eut_pre <- T
-p.pow_inv <- T
+p.pow_inv <- F
 p.prewel5 <- F
 p.eutwel5 <- F
 
@@ -928,6 +951,8 @@ rm(FDAT, p)
 # All Welfare
 if (p.eut_pre) {
 
+	doinv <- F
+
 		load(paste0("../data/classify/full/", inst, "-bak.Rda"))
 		FDAT <- get(inst) %>%
 			filter(model == "EUT") %>%
@@ -935,7 +960,7 @@ if (p.eut_pre) {
 			select(starts_with("real"), ends_with("CEdiff"), ends_with("Est"), ends_with(wel.var),
 						starts_with("EUT"), starts_with("win"), r, mu)
 
-		p.eut <- welfare5(FDAT, "EUT", "r", sfrac = wel_frac, wel.var, legpos = "right", doinv = F)
+		p.eut <- welfare5(FDAT, "EUT", "r", sfrac = wel_frac, wel.var, legpos = "right", doinv = doinv)
 		rm(FDAT)
 
 		load(paste0("../data/classify/full/", inst, "-bak.Rda"))
@@ -945,10 +970,12 @@ if (p.eut_pre) {
 			starts_with("PRE"), starts_with("win"), r, alpha, beta, mu)
 
 		print("Beginning with Prelec welfare5 alpha")
-		p.prea <- welfare5(filter(FDAT, beta > 1.2 | beta < 0.8), "Prelec", "alpha", sfrac = wel_frac, wel.var, doinv = F)
+		#p.prea <- welfare5(filter(FDAT, beta > 1.2 | beta < 0.8), "Prelec", "alpha", sfrac = wel_frac, wel.var, doinv = doinv)
+		p.prea <- welfare5(FDAT, "Prelec", "alpha", sfrac = wel_frac, wel.var, doinv = doinv)
 
 		print("Beginning with Prelec welfare5 beta")
-		p.preb <- welfare5(filter(FDAT, alpha > 1.2 | alpha < 0.8), "Prelec", "beta", sfrac = wel_frac, wel.var, doinv = F)
+		#p.preb <- welfare5(filter(FDAT, alpha > 1.2 | alpha < 0.8), "Prelec", "beta", sfrac = wel_frac, wel.var, doinv = doinv)
+		p.preb <- welfare5(FDAT, "Prelec", "beta", sfrac = wel_frac, wel.var, doinv = doinv)
 
 		rm(FDAT)
 		rm(list=inst)
