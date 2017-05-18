@@ -1,12 +1,6 @@
-library(dplyr)
-library(ggplot2)
+plot_fits <- function(inst) {
 
-instruments <- c("HNG", "HNG_1", "HO", "LMS20", "LMS30", "SH")
-instruments <- c("HNG_1")
-fit_dir    <- "../data/lo_fits/"
-load_suffix <- "-win.Rda"
-
-for (inst in instruments) {
+	load_suffix <- "-win.Rda"
 
 	load(paste0(fit_dir, inst, load_suffix))
 
@@ -30,5 +24,5 @@ for (inst in instruments) {
 	              geom_point(alpha = 0.35) + geom_smooth()
 
 }
-p
 
+c.lapply(plot_fits, insts)

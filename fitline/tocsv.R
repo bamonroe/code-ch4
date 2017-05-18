@@ -1,16 +1,9 @@
-library(halton)
-library(dplyr)
-library(mgcv)
 
-instruments <- c("HNG", "HNG_1", "HO", "LMS20", "LMS30", "SH")
-instruments <- c("HNG_1")
-fit_dir    <- "../data/lo_fits/"
-table_dir    <- "../tables/"
-load_suffix <- "-win.Rda"
-save_suffix <- ".csv"
+pop_to_csv <- function(inst) {
 
-
-for (inst in instruments) {
+	table_dir    <- "../tables/"
+	load_suffix <- "-win.Rda"
+	save_suffix <- ".csv"
 
 	load(paste0(fit_dir, inst, load_suffix))
 
@@ -45,3 +38,5 @@ for (inst in instruments) {
 	write.csv(PAB,  file = paste0(table_dir, inst, "-PAB-wel", save_suffix), quote = F, row.names = F)
 
 }
+
+c.lapply(pop_to_csv, insts)

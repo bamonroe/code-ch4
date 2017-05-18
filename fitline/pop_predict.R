@@ -1,13 +1,3 @@
-library(halton)
-library(dplyr)
-library(mgcv)
-
-instruments <- c("HNG", "HNG_1", "HO", "LMS20", "LMS30", "SH")
-instruments <- c("HNG_1")
-fit_dir    <- "../data/lo_fits/"
-load_suffix  <- "_loess-mini.Rda"
-load_suffix  <- "_gam-gam.Rda"
-save_suffix <- "-win.Rda"
 
 # mvhnorm is a multi-variate normal distribution using halton draws
 
@@ -218,61 +208,74 @@ cond_probs <- function(wmat) {
 
 }
 
-HH <- 100000
+pop_predict <- function(inst, mods) {
+	load_suffix  <- ".Rda"
+	save_suffix  <- "-win.Rda"
 
-r_mean       <- 0.6
-r_sd         <- 0.1
+	HH <- 100000
 
-mu_mean0     <- 0.10
-mu_sd0       <- 0.02
+	r_mean       <- 0.6
+	r_sd         <- 0.1
 
-alpha_mean0  <- .6
-alpha_sd0    <- 0.1
-alpha2_mean0 <- 1.6
-alpha2_sd0   <- 0.1
+	mu_mean0     <- 0.10
+	mu_sd0       <- 0.02
 
-beta_mean0   <- 1.6
-beta_sd0     <- 0.1
-beta2_mean0  <- 0.6
-beta2_sd0    <- 0.1
+	alpha_mean0  <- .6
+	alpha_sd0    <- 0.1
+	alpha2_mean0 <- 1.6
+	alpha2_sd0   <- 0.1
 
-# proportion of the non {alpha,beta}2 pop
-pop_mix   <- 1
-pre_mix   <- 0
+	beta_mean0   <- 1.6
+	beta_sd0     <- 0.1
+	beta2_mean0  <- 0.6
+	beta2_sd0    <- 0.1
 
-eut_prop <- .5
-pow_prop <- .1
-inv_prop <- .1
-pre_prop <- .3
+	# proportion of the non {alpha,beta}2 pop
+	pop_mix   <- 1
+	pre_mix   <- 0
 
-# make sure the props sum to 1
-eut_prop0 <- eut_prop / (eut_prop + pow_prop + inv_prop + pre_prop)
-pow_prop0 <- pow_prop / (eut_prop + pow_prop + inv_prop + pre_prop)
-inv_prop0 <- inv_prop / (eut_prop + pow_prop + inv_prop + pre_prop)
-pre_prop0 <- pre_prop / (eut_prop + pow_prop + inv_prop + pre_prop)
-props <- list(EUT = eut_prop0, POW = pow_prop0, INV = inv_prop0, PRE = pre_prop0)
+	eut_prop <- .5
+	pow_prop <- .1
+	inv_prop <- .1
+	pre_prop <- .3
 
-for (inst in instruments) {
+	if (! "EUT" %in% mods) eut_prop <- 0
+	if (! "POW" %in% mods) pow_prop <- 0
+	if (! "INV" %in% mods) inv_prop <- 0
+	if (! "PRE" %in% mods) pre_prop <- 0
 
-	load(paste0(fit_dir, inst, load_suffix))
+	# make sure the props sum to 1
+	eut_prop0 <- eut_prop / (eut_prop + pow_prop + inv_prop + pre_prop)
+	pow_prop0 <- pow_prop / (eut_prop + pow_prop + inv_prop + pre_prop)
+	inv_prop0 <- inv_prop / (eut_prop + pow_prop + inv_prop + pre_prop)
+	pre_prop0 <- pre_prop / (eut_prop + pow_prop + inv_prop + pre_prop)
+	props     <- list(EUT = eut_prop0, POW = pow_prop0, INV = inv_prop0, PRE = pre_prop0)
 
-	mod_fit <- get(paste0(inst, "_gam"))
+	for (win_var in win_vars) {
 
-	#list(predictions = predictions, pred_sums = pred_mat)
-	winners <- who_won(mod_fit, HH, props)
+		fit_name <- paste0(inst, "_", win_var, "_fit")
 
-	cprobs <- cond_probs(winners$pred_sums)
-	cat("\nConditional Probability Information\n")
-	print(lapply(cprobs, round, digits = 3))
+		load(paste0(fit_dir, fit_name, load_suffix))
 
-	welprob <- list()
-	welprob$wel_sums <- winners$wel_sums / HH
-	welprob$P_BA     <- ((winners$wel_sums / HH) * cprobs$P_BA) %>% rowSums
-	welprob$P_AB     <- ((winners$wel_sums / HH) * cprobs$P_AB) %>% colSums
-	
-	print(lapply(welprob, round, digits = 3))
+		mod_fit  <- get(fit_name)
 
-	save(winners, cprobs, welprob, file = paste0(fit_dir, inst, save_suffix))
+		#list(predictions = predictions, pred_sums = pred_mat)
+		winners <- who_won(mod_fit, HH, props)
+
+		cprobs <- cond_probs(winners$pred_sums)
+		cat("\nConditional Probability Information\n")
+		print(lapply(cprobs, round, digits = 3))
+
+		welprob <- list()
+		welprob$wel_sums <- winners$wel_sums / HH
+		welprob$P_BA     <- ((winners$wel_sums / HH) * cprobs$P_BA) %>% rowSums
+		welprob$P_AB     <- ((winners$wel_sums / HH) * cprobs$P_AB) %>% colSums
+		
+		print(lapply(welprob, round, digits = 3))
+
+		save(winners, cprobs, welprob, file = paste0(fit_dir, inst, "_", win_var, save_suffix))
+	}
 
 }
 
+c.lapply(insts, pop_predict, mods = mods)

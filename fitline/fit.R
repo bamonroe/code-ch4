@@ -1,52 +1,43 @@
-library(dplyr)
-library(mgcv)
+fit_gam <- function(win_mod, dat, mod, wel_var, class_var) {
+#dbug <- 1
+#print(paste("here", dbug)) ; dbug <- dbug + 1
 
-instruments <- c("HNG", "HNG_1", "HO", "LMS20", "LMS30", "SH")
-instruments <- c("HNG_1")
-data_dir <- "../data/classify/full/"
-fit_dir <- "../data/lo_fits/"
-load_suffix <- "-bak.Rda"
-load_suffix <- "-mini.Rda"
-save_suffix <- "-gam.Rda"
+	cat(c(rep(" ",6),"Win:", win_mod),"\n")
 
-wel.vars <- c("WelSurplus", "WelMax", "WelEfficiency", "CEdiff", "Prob")
-wel.var  <- wel.vars[1]
+	dat  <- dat %>% filter(model == mod)
 
-fit_gam <- function(dat, mod, win, wel) {
+	dat$win <- ifelse(dat[[class_var]] == win_mod, 1, 0)
 
-	dat <- dat %>%
-		filter(model == mod)
+	cat(c(rep(" ",8),"Fitting Probability","\n"))
 
-	dat$win_05 <- ifelse(dat$win_05 == win, 1, 0)
-
-	dat <- dat %>%
-		filter(!is.na(win_05))
-
-	cat("\n")
-	cat(paste(mod, "as", win, ":", sum(dat$win_05), "; Not NA:", nrow(dat), "\n"))
-
-	cat("\tFitting Probability\n")
 	if (mod == "EUT") {
-		pfit <- gam(win_05 ~ s(r) + s(mu), data = dat)
-	} else if ((mod == "pow") | (mod == "invs")) {
-		pfit <- gam(win_05 ~ s(r) + s(alpha) + s(r, alpha) + s(mu), data = dat)
-	} else if (mod == "prelec") {
-		pfit <- gam(win_05 ~ s(r) + s(alpha) + s(beta) + s(alpha, beta)+ s(r, alpha, beta) + s(mu), data = dat)
+		pfit <- gam(win ~ s(r) + s(mu), data = dat)
+	} else if (mod == "POW") {
+		pfit <- gam(win ~ s(r) + s(alpha) + s(r, alpha) + s(mu), data = dat)
+	} else if (mod == "INV") {
+		pfit <- gam(win ~ s(r) + s(alpha) + s(r, alpha) + s(mu), data = dat)
+	} else if (mod == "PRE") {
+		pfit <- gam(win ~ s(r) + s(alpha) + s(beta) + s(alpha, beta)+ s(r, alpha, beta) + s(mu), data = dat)
 	} else {
 		stop("Not a correct model")
 	}
 
+	# NA models don't have estimates to make welfare predictions
+	if (win_mod == "NA") return(list(prob = pfit, wel = NULL))
+
 	dat <- dat %>%
-		filter(win_05 == 1)
+		filter(win == 1)
 
-	dat$wel <- dat[[paste0(win, "_", wel)]] - dat[[paste0("real_", wel)]]
+	dat$wel <- dat[[paste0(win_mod, "_", wel_var)]] - dat[[paste0("real_", wel_var)]]
 
-	cat("\tFitting Welfare\n")
+	cat(c(rep(" ",8),"Fitting Welfare","\n"))
 	if (mod == "EUT") {
 		wfit <- gam(wel ~ s(r) + s(mu), data = dat)
-	} else if ((mod == "pow") | (mod == "invs")) {
+	} else if (mod == "POW") {
 		wfit <- gam(wel ~ s(r) + s(alpha) + s(r, alpha) + s(mu), data = dat)
-	} else if (mod == "prelec") {
+	} else if (mod == "INV") {
+		wfit <- gam(wel ~ s(r) + s(alpha) + s(r, alpha) + s(mu), data = dat)
+	} else if (mod == "PRE") {
 		wfit <- gam(wel ~ s(r) + s(alpha) + s(beta) + s(alpha, beta)+ s(r, alpha, beta) + s(mu), data = dat)
 	} else {
 		stop("Not a correct model")
@@ -55,42 +46,45 @@ fit_gam <- function(dat, mod, win, wel) {
 	return(list(prob = pfit, wel = wfit))
 }
 
-for (inst in instruments) {
+fitter <- function(inst, mods) {
+
+	#dbug <- 1
+	#print(paste("here", dbug)) ; dbug <- dbug + 1
+
+	load_suffix <- "-bak.Rda"
+	save_suffix <- ".Rda"
 
 	load(paste0(data_dir, inst, load_suffix))
 
-	cat(paste("\nFitting for", inst),"\n")
+	cat(c("\nFitting for", inst),"\n")
 
 	# Load the instrument into a known var
-	idat <- get(inst)
+	dat <- get(inst)
 
-	gam_fits <- list()
+	for (class_var in win_vars) {
 
-	gam_fits$EUT <- list(EUT = fit_gam(idat, "EUT",    "EUT", wel.var),
-	                     POW = fit_gam(idat, "EUT",    "POW", wel.var),
-	                     INV = fit_gam(idat, "EUT",    "INV", wel.var),
-	                     PRE = fit_gam(idat, "EUT",    "PRE", wel.var))
-	gam_fits$POW <- list(EUT = fit_gam(idat, "pow",    "EUT", wel.var),
-	                     POW = fit_gam(idat, "pow",    "POW", wel.var),
-	                     INV = fit_gam(idat, "pow",    "INV", wel.var),
-	                     PRE = fit_gam(idat, "pow",    "PRE", wel.var))
-	gam_fits$INV <- list(EUT = fit_gam(idat, "invs",   "EUT", wel.var),
-	                     POW = fit_gam(idat, "invs",   "POW", wel.var),
-	                     INV = fit_gam(idat, "invs",   "INV", wel.var),
-	                     PRE = fit_gam(idat, "invs",   "PRE", wel.var))
-	gam_fits$PRE <- list(EUT = fit_gam(idat, "prelec", "EUT", wel.var),
-	                     POW = fit_gam(idat, "prelec", "POW", wel.var),
-	                     INV = fit_gam(idat, "prelec", "INV", wel.var),
-	                     PRE = fit_gam(idat, "prelec", "PRE", wel.var))
+		cat(c(rep(" ",2),"Class Var:", class_var),"\n")
 
-	fit_name <- paste0(inst, "_gam")
+		gam_fits <- lapply(mods, function(mod) {
+			cat(c(rep(" ",4),"Mod:", mod),"\n")
+			mmods      <- c(mods, "NA")
+			out        <- lapply(mmods, fit_gam,
+			                     dat = dat, mod = mod, wel_var = wel_var, class_var = class_var)
+			names(out) <- mmods
+			return(out)
+		})
 
-	assign(fit_name, gam_fits)
+		names(gam_fits) <- mods
 
-	save(list=fit_name, file=paste0(fit_dir, fit_name, save_suffix))
+		fit_name <- paste0(inst, "_", class_var, "_fit")
+		assign(fit_name, gam_fits)
+
+		save(list=fit_name, file=paste0(fit_dir, fit_name, save_suffix))
+		cat("\n")
+	}
 	cat("\n")
 
 }
 
-
+c.lapply(insts, fitter, mods = mods)
 
