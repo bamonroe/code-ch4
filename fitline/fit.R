@@ -67,19 +67,33 @@ fitter <- function(inst, mods) {
 
 		gam_fits <- lapply(mods, function(mod) {
 			cat(c(rep(" ",4),"Mod:", mod),"\n")
-			mmods      <- c(mods, "NA")
-			out        <- lapply(mmods, fit_gam,
-			                     dat = dat, mod = mod, wel_var = wel_var, class_var = class_var)
+			mmods <- c(mods)
+			dat0  <- dat[which(dat[[class_var]] != "NA"),]
+			out   <- lapply(mmods, fit_gam,
+			                dat = dat0, mod = mod, wel_var = wel_var, class_var = class_var)
+			names(out) <- mmods
+			return(out)
+		})
+
+		gam_fits_na <- lapply(mods, function(mod) {
+			cat(c(rep(" ",4),"NA Mod:", mod),"\n")
+			mmods <- c(mods, "NA")
+			out   <- lapply(mmods, fit_gam,
+			                dat = dat, mod = mod, wel_var = wel_var, class_var = class_var)
 			names(out) <- mmods
 			return(out)
 		})
 
 		names(gam_fits) <- mods
+		names(gam_fits_na) <- mods
 
-		fit_name <- paste0(inst, "_", class_var, "_fit")
-		assign(fit_name, gam_fits)
+		fit_name    <- paste0(inst, "_", class_var, "_fit")
+		fit_name_na <- paste0(fit_name, "_na")
 
-		save(list=fit_name, file=paste0(fit_dir, fit_name, save_suffix))
+		assign(fit_name,    gam_fits)
+		assign(fit_name_na, gam_fits_na)
+
+		save(list=c(fit_name, fit_name_na), file=paste0(fit_dir, fit_name, save_suffix))
 		cat("\n")
 	}
 	cat("\n")

@@ -8,13 +8,11 @@ mkmini_1 <- function(inst, mods) {
 
 	dat <- get(inst)
 
-	nn <- .01
-
 	# Reduce the dataset to only include models we care about, and sample as necessary
 	dat0 <- lapply(mods, function(mod) {
 		dat %>%
 			filter(model == mod) %>%
-			sample_frac(nn)
+			sample_frac(mini_frac)
 	})
 
 	dat <- do.call(rbind, dat0)
@@ -36,7 +34,7 @@ mkmini_2 <- function(inst, mods, wel_var) {
 	dat <- get(inst)
 
 	dat <- dat %>%
-		select(starts_with("win"), default, starts_with("real"), ends_with(wel.var), r, mu, alpha, beta, model)
+		select(starts_with("win"), default, starts_with("real"), ends_with(wel_var), r, mu, alpha, beta, model)
 
 	assign(inst, dat)
 

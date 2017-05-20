@@ -5,253 +5,227 @@ library(MSL)
 
 theme_set(theme_grey())
 
-plot_win <- function(dat, par, win_var) {
+label_fun <- function(mnames) {
+	ifelse(mnames == "EUT", "EUT",
+		 ifelse(mnames == "POW", "RDU Power",
+				ifelse(mnames == "INV", "RDU Inverse S",
+					ifelse(mnames == "PRE", "RDU Prelec",
+						ifelse(mnames == "NA", "NA", 
+							ifelse(mnames == "Expected", "Expected", mnames))))))
+}
 
-#	dbug <- 0
-#	print(paste0("here", dbug)) ; dbug <- dbug + 1
+par_model <- function(mnames) {
+	if (mnames == "EUT") {
+		out <- c("r")
+	} else if (mnames == "POW") {
+		out <- c("alpha")
+	} else if (mnames == "INV") {
+		out <- c("alpha")
+	} else if (mnames == "PRE") {
+		out <- c("alpha", "beta")
+	}
+	return(out)
+}
 
-	print(paste("Plotting Winners"))
+plot_win <- function(dat, par, models, win_var) {
+	#dbug <- 1
+	#print(paste0("here", dbug)) ; dbug <- dbug + 1
+
+	if (length(par) > 1 & length(models) > 1) 
+		stop(paste("Pars is of length", length(par), ", and Models is of length", length(models), ", this is wrong"))
+	else if (length(models) > 1)
+		do_by <- "model"
+	else
+		do_by <- "par"
+
 	# How many subjects do we have? To put in Title
 	N <- nrow(dat)
 
-	# For each model, we need to know if that model was declared a winner for each subject by sig level
+	# Define the plot title
+	title_mods <- paste(label_fun(models), collapse = ", ")
+	title      <- paste(title_mods, "Subjects, N = ", N)
+
+	cat(c(rep(" ", 4), "Plotting Winners for", title_mods, "\n"))
+
 	dat[[win_var]] <- ifelse(is.na(dat[[win_var]]), "NA", dat[[win_var]])
 
-	dat$cor     <- 0
-	dat$win     <- 0
-	dat$conv    <- 0
+	dat$point <- NA
+	dat$U95   <- NA
+	dat$L95   <- NA
+	dat$win   <- NA
+	dat$conv  <- NA
 
-	dat.eut     <- dat
-	dat.eut$cor <- ifelse(dat[[win_var]] == "EUT", 1, 0)
-	dat.eut$win <- 1
+	dat1 <- lapply(mods, function(mod) {
+		dat0       <- dat
+		dat0$point <- ifelse(dat0[[win_var]] == mod, dat0[[paste0(win_var, "_", mod, "_prob")]],     dat0$point)
+		dat0$U95   <- ifelse(dat0[[win_var]] == mod, dat0[[paste0(win_var, "_", mod, "_prob_U95")]], dat0$U95)
+		dat0$L95   <- ifelse(dat0[[win_var]] == mod, dat0[[paste0(win_var, "_", mod, "_prob_L95")]], dat0$L95)
+		dat0$win   <- which(mods == mod)
+		dat0$conv  <- 1
+		return(dat0)
+	})
 
-	dat.pre     <- dat
-	dat.pre$cor <- ifelse(dat[[win_var]] == "PRE", 1, 0)
-	dat.pre$win <- 2
+	mmods <- c(mods, "NA")
+	dat2 <- lapply(mmods, function(mod) {
+		dat0       <- dat
+		dat0$point <- ifelse(dat0[[win_var]] == mod, dat0[[paste0(win_var, "_", mod, "_prob_na")]],     dat0$point)
+		dat0$U95   <- ifelse(dat0[[win_var]] == mod, dat0[[paste0(win_var, "_", mod, "_prob_na_U95")]], dat0$U95)
+		dat0$L95   <- ifelse(dat0[[win_var]] == mod, dat0[[paste0(win_var, "_", mod, "_prob_na_L95")]], dat0$L95)
+		dat0$win   <- which(mmods == mod)
+		dat0$conv  <- 2
+		return(dat0)
+	})
 
-	dat.na      <- dat
-	dat.na$cor  <- ifelse(dat[[win_var]] == "NA", 1, 0)
-	dat.na$win  <- 3
+	dat1 <- do.call(rbind, dat1)
+	dat2 <- do.call(rbind, dat2)
+	dat  <- rbind(dat1, dat2)
 
-	dat.conv <- rbind(dat.eut, dat.pre) %>%
-		filter_(win_var != "NA")
-	dat.conv$conv <- 1
+	rm(dat1, dat2)
 
-	dat <- rbind(dat.eut, dat.pre, dat.na)
-	dat$conv <- 2
+	# Make "model" an integer so it can be easily factored
+	for (mod in mods) {
+		dat[which(dat$model == mod), "model"] <- which(mods == mod)
+	}
 
-	dat <- rbind(dat, dat.conv)
+	# duplicate dataset for each parameter to be used
+	row0 <- nrow(dat)
+	dat0 <- dat
+	dat  <- dat[rep(seq_len(row0), length(par)), ]
+	dat$par <- NA
+	dat$par_grp <- NA
+	for (i in 1:length(par)) {
+		start <- (i-1)*row0 + 1
+		end   <- i*row0
+		dat$par[start:end]     <- dat0[[par[i]]]
+		dat$par_grp[start:end] <- i
+	}
+	rm(dat0)
 
-	dat[which(dat$model == "EUT"),    "model"] <- 1
-	dat[which(dat$model == "prelec"), "model"] <- 2
-
-	dat$conv  <- factor(dat$conv,  levels = 1:2, labels = c("Converged Only", "All Data"))
-	dat$win   <- factor(dat$win,   levels = 1:3, labels = c("EUT", "RDU Prelec", "NA"))
-	dat$model <- factor(dat$model, levels = 1:2, labels = c("EUT", "RDU Prelec"))
+	# Factor things
+	dat$conv  <- factor(dat$conv,  levels = 1:2,             labels = c("Converged Only", "All Data"))
+	dat$win   <- factor(dat$win,   levels = 1:length(mmods), labels = label_fun(mmods))
+	dat$model <- factor(dat$model, levels = 1:length(mods),  labels = label_fun(mods))
+	dat$par_grp <- factor(dat$par_grp, levels = 1:length(par), labels = par)
 
 	dat <- dat %>%
-		select_(par, "model", "cor", "win", "conv")
+		select_("par", "par_grp", "model", "point", "U95", "L95", "win", "conv") %>%
+		filter(!is.na(point))
 
-	print(paste("Now plotting with", nrow(dat), "rows"))
+	cat(c(rep(" ", 4), "Now plotting with", nrow(dat), "rows", "\n"))
 
-	p <- ggplot(dat, aes_string(x = par, y = "cor"))
+	p <- ggplot(dat, aes_string(x = "par", y = "point", color = "win", linetype = "win"))
 	p <- p + scale_y_continuous(limits = c(0,1))
-	p <- p + geom_smooth(span = 0.15, aes(color = win))
-	p <- p + facet_grid(conv~model)
-	p <- p + labs(title = paste("Subjects, N =", N), x = paste(par, "Value"), y = "Frequency of Winning", color = "Winning Model")
-	p <- p + theme(plot.title = element_text(hjust = 0.5), legend.position = "bottom")
+	p <- p + geom_smooth(span = 0.15, se = F)
+	p <- p + geom_smooth(span = 0.15, aes(y = U95), linetype = 5, se = F)
+	p <- p + geom_smooth(span = 0.15, aes(y = L95), linetype = 5, se = F)
 
-	print(p)
+	if (do_by == "model") {
+		p    <- p + facet_grid(conv~model)
+		xlab <- paste(par, "Value")
+	}
+	else if (do_by == "par") {
+		p    <- p + facet_grid(conv~par_grp, scales = "free_x")
+		xlab <- "Parameter Value"
+	}
+
+	p <- p + labs(title = title, x = xlab, y = "Frequency of Winning")
+	p <- p + theme(plot.title = element_text(hjust = 0.5), legend.position = "bottom")
 
 	return(p)
 }
 
-plot_wel <- function(dat, par, wel_var, win_var) {
+plot_wel <- function(dat, par, models, wel_var, win_var) {
 	#dbug <- 1
-	#print(paste("here:", dbug)) ; dbug <- dbug + 1
-	print(paste("Plotting Welfare for 5%"))
+	#print(paste0("here", dbug)) ; dbug <- dbug + 1
 
-	dat$cor <- 1
-	dat05 <- dat
+	if (length(par) > 1 & length(models) > 1) 
+		stop(paste("Pars is of length", length(par), ", and Models is of length", length(models), ", this is wrong"))
+	else if (length(models) > 1)
+		do_by <- "model"
+	else
+		do_by <- "par"
 
-	dat05$cor   <- ifelse(dat[[win_var]] == "EUT", dat[[paste0("EUT_", wel_var)]], NA)
-	dat.eut     <- dat05
-	dat.eut$win <- 1
+	# How many subjects do we have? To put in Title
+	N <- nrow(dat)
 
-	dat05$cor   <- ifelse(dat[[win_var]] == "PRE", dat[[paste0("PRE_", wel_var)]], NA)
-	dat.pre     <- dat05
-	dat.pre$win <- 2
+	# Define the plot title
+	title_mods <- paste(label_fun(models), collapse = ", ")
+	title      <- paste(title_mods, "Subjects, N = ", N)
 
-	dat <- rbind(dat.eut, dat.pre)
-	dat[which(dat$model == "EUT"),    "model"] <- 1
-	dat[which(dat$model == "prelec"), "model"] <- 2
+	cat(c(rep(" ", 4), "Plotting Welfare for", title_mods, "\n"))
 
-	dat$win   <- factor(dat$win, c(1,2), labels = c("EUT", "RDU Prelec"))
-	dat$model <- factor(dat$model, levels = 1:2, labels = c("EUT", "RDU Prelec"))
+	dat[[win_var]] <- ifelse(is.na(dat[[win_var]]), "NA", dat[[win_var]])
 
-	# take the difference between the estimate and the real values for the welfare metric
-	dat$cor <- dat$cor - dat[[paste0("real_", wel_var)]]
+	dat$point <- NA
+	dat$U95   <- NA
+	dat$L95   <- NA
+	dat$win   <- NA
+
+	mmods <- c(mods, "Expected")
+	dat1 <- lapply(mmods, function(mod) {
+		dat0       <- dat
+		if (mod != "Expected") {
+			dat0$point <- ifelse(dat0[[win_var]] == mod, dat0[[paste0(win_var, "_", mod, "_wel")]],     dat0$point)
+			dat0$U95   <- ifelse(dat0[[win_var]] == mod, dat0[[paste0(win_var, "_", mod, "_wel_U95")]], dat0$U95)
+			dat0$L95   <- ifelse(dat0[[win_var]] == mod, dat0[[paste0(win_var, "_", mod, "_wel_L95")]], dat0$L95)
+			dat0$win   <- which(mmods == mod)
+		} else {
+			dat0$point <- dat0[[paste0(win_var, "_ewel_point")]]
+			dat0$win   <- which(mmods == mod)
+		}
+		return(dat0)
+	})
+
+	dat <- do.call(rbind, dat1)
+
+	# Make "model" an integer so it can be easily factored
+	for (mod in mods) {
+		dat[which(dat$model == mod), "model"] <- which(mods == mod)
+	}
+
+	# duplicate dataset for each parameter to be used
+	row0 <- nrow(dat)
+	dat0 <- dat
+	dat  <- dat[rep(seq_len(row0), length(par)), ]
+	dat$par <- NA
+	dat$par_grp <- NA
+	for (i in 1:length(par)) {
+		start <- (i-1)*row0 + 1
+		end   <- i*row0
+		dat$par[start:end]     <- dat0[[par[i]]]
+		dat$par_grp[start:end] <- i
+	}
+	rm(dat0)
+
+	dat$win     <- factor(dat$win,     levels = 1:length(mmods), labels = label_fun(mmods))
+	dat$model   <- factor(dat$model,   levels = 1:length(mmods), labels = label_fun(mmods))
+	dat$par_grp <- factor(dat$par_grp, levels = 1:length(par),   labels = par)
 
 	dat <- dat %>%
-#		filter(mu < 0.20) %>%
-		select_(par, "model", "cor", "win")
+		select_("par", "par_grp", "model", "point", "U95", "L95", "win") %>%
+		filter(!is.na(point))
 
-	rows <- nrow(dat)
+	cat(c(rep(" ", 4), "Now plotting welfare with", nrow(dat), "rows", "\n"))
 
-	print(paste("Now plotting welfare with", rows, "rows"))
-
-	p <- ggplot(dat, aes_string(x = par, y = "cor"))
+	p <- ggplot(dat, aes_string(x = "par", y = "point", color = "win", linetype = "win"))
 	p <- p + facet_grid(~model)
-#	p <- p + geom_point(aes(color = mod), alpha = 0.1)
-	p <- p + geom_smooth(span = 0.15, aes(color = win))
-	p <- p + coord_cartesian(ylim = c(-80,2.5))
-	p <- p + labs(title = paste("All Subjects"), x = paste(par, "Value"), y = paste("Absolute Value of Estimated", wel_var, "- Real", wel_var), color = "Classified Model")
+	p <- p + geom_smooth(span = 0.15, se = F)
+	p <- p + geom_smooth(span = 0.15, aes(y = U95), linetype = 5, se = F)
+	p <- p + geom_smooth(span = 0.15, aes(y = L95), linetype = 5, se = F)
+
+	if (do_by == "model") {
+		p    <- p + facet_grid(~model)
+		xlab <- paste(par, "Value")
+	}
+	else if (do_by == "par") {
+		p    <- p + facet_grid(~par_grp, scales = "free_x")
+		xlab <- "Parameter Value"
+	}
+
+	p <- p + coord_cartesian(ylim = c(-45, 15))
+	p <- p + labs(title = title, x = xlab, y = paste("Value of Estimated", wel_var, "- Real", wel_var), color = "Classified Model")
 	p <- p + theme(plot.title = element_text(hjust = 0.5), legend.position = "bottom")
 	
-	return(p)
-}
-
-plot_win_ind <- function(dat, par, mod, win_var) {
-
-#	dbug <- 0
-#	print(paste0("here", dbug)) ; dbug <- dbug + 1
-
-	print(paste("Plotting Winners"))
-	# How many subjects do we have? To put in Title
-	N <- nrow(dat)
-
-	# For each model, we need to know if that model was declared a winner for each subject by sig level
-	dat[[win_var]] <- ifelse(is.na(dat[[win_var]]), "NA", dat[[win_var]])
-
-	dat$cor     <- 0
-	dat$win     <- 0
-	dat$conv    <- 0
-
-	dat.eut     <- dat
-	dat.eut$cor <- ifelse(dat[[win_var]] == "EUT", 1, 0)
-	dat.eut$win <- 1
-
-	dat.pre     <- dat
-	dat.pre$cor <- ifelse(dat[[win_var]] == "PRE", 1, 0)
-	dat.pre$win <- 2
-
-	dat.na      <- dat
-	dat.na$cor  <- ifelse(dat[[win_var]] == "NA", 1, 0)
-	dat.na$win  <- 3
-
-	dat.conv <- rbind(dat.eut, dat.pre) %>%
-		filter_(win_var != "NA")
-	dat.conv$conv <- 1
-
-	dat <- rbind(dat.eut, dat.pre, dat.na)
-	dat$conv <- 2
-
-	dat <- rbind(dat, dat.conv)
-
-	# duplicate
-	row0 <- nrow(dat)
-	dat0 <- dat
-	dat  <- dat[rep(seq_len(row0), length(par)), ]
-	dat$par <- NA
-	dat$par_grp <- NA
-	for (i in 1:length(par)) {
-		start <- (i-1)*row0 + 1
-		end   <- i*row0
-		dat$par[start:end]     <- dat0[[par[i]]]
-		dat$par_grp[start:end] <- i
-	}
-
-	# Drop some things
-	rm(dat0, dat.eut, dat.pre, dat.conv)
-
-	# Make things factored
-	dat$conv    <- factor(dat$conv,    levels = 1:2, labels = c("Converged Only", "All Data"))
-	dat$win     <- factor(dat$win,     levels = 1:3, labels = c("EUT", "RDU Prelec", "NA"))
-	dat$par_grp <- factor(dat$par_grp, levels = 1:length(par), labels = par)
-
-#	dat %>% summary %>% print
-
-	dat <- dat %>%
-		select_("par", "par_grp", "model", "cor", "win", "conv")
-
-	print(paste("Now plotting with", nrow(dat), "rows"))
-
-	p <- ggplot(dat, aes_string(x = "par", y = "cor"))
-	p <- p + scale_y_continuous(limits = c(0,1))
-	p <- p + geom_smooth(span = 0.15, aes(color = win))
-	p <- p + facet_grid(conv~par_grp, scales = "free_x")
-	p <- p + labs(title = paste(mod, "Subjects, N =", N), x = paste("Parameter Value"), y = "Frequency of Winning", color = "Winning Model")
-	p <- p + theme(plot.title = element_text(hjust = 0.5), legend.position = "bottom")
-
-	print(p)
-
-	return(p)
-}
-
-plot_wel_ind <- function(dat, par, wel_var, mod, win_var) {
-
-#	dbug <- 0
-#	print(paste0("here", dbug)) ; dbug <- dbug + 1
-
-	print(paste("Plotting Welfare for", mod))
-	# How many subjects do we have? To put in Title
-	N <- nrow(dat)
-
-	# For each model, we need to know if that model was declared a winner for each subject by sig level
-	dat[[win_var]] <- ifelse(is.na(dat[[win_var]]), "NA", dat[[win_var]])
-
-	dat$cor     <- 0
-	dat$win     <- 0
-
-	dat.eut     <- dat
-	dat.eut$cor <- ifelse(dat[[win_var]] == "EUT", dat[[paste0("EUT_", wel_var)]], NA)
-	dat.eut$win <- 1
-
-	dat.pre     <- dat
-	dat.pre$cor <- ifelse(dat[[win_var]] == "PRE", dat[[paste0("PRE_", wel_var)]], NA)
-	dat.pre$win <- 2
-
-	dat <- rbind(dat.eut, dat.pre)
-
-	# take the difference between the estimate and the real values for the welfare metric
-	dat$cor <- dat$cor - dat[[paste0("real_", wel_var)]]
-
-	# duplicate
-	row0 <- nrow(dat)
-	dat0 <- dat
-	dat  <- dat[rep(seq_len(row0), length(par)), ]
-	dat$par <- NA
-	dat$par_grp <- NA
-	for (i in 1:length(par)) {
-		start <- (i-1)*row0 + 1
-		end   <- i*row0
-		dat$par[start:end]     <- dat0[[par[i]]]
-		dat$par_grp[start:end] <- i
-	}
-
-	# Drop some things
-	rm(dat0, dat.eut, dat.pre)
-
-	# Make things factored
-	dat$win     <- factor(dat$win,     levels = 1:3, labels = c("EUT", "RDU Prelec", "NA"))
-	dat$par_grp <- factor(dat$par_grp, levels = 1:length(par), labels = par)
-
-#	dat %>% summary %>% print
-
-	dat <- dat %>%
-		select_("par", "par_grp", "model", "cor", "win")
-
-	print(paste("Now plotting with", nrow(dat), "rows"))
-
-	p <- ggplot(dat, aes_string(x = "par", y = "cor"))
-	p <- p + geom_smooth(span = 0.15, aes(color = win))
-	p <- p + facet_grid(~par_grp, scales = "free_x")
-	p <- p + coord_cartesian(ylim = c(-80,2.5))
-	p <- p + labs(title = paste(mod, "Subjects, N =", N), x = paste("Parameter Value"), y = "Frequency of Winning", color = "Winning Model")
-	p <- p + theme(plot.title = element_text(hjust = 0.5), legend.position = "bottom")
-
-	print(p)
-
 	return(p)
 }
 
@@ -260,7 +234,7 @@ welfare5 <- function(dat, mod, par, wel_var, win_var, legpos = "none", yaxis = F
 	#dbug <- 1
 	#print(paste("here:", dbug)) ; dbug <- dbug + 1
 
-	print(paste("Plotting Welfare for 5%"))
+	cat(c("Plotting Welfare for 5%", "\n"))
 
 	N <- nrow(dat)
 
@@ -315,33 +289,29 @@ welfare5 <- function(dat, mod, par, wel_var, win_var, legpos = "none", yaxis = F
 
 per_inst <- function(inst) {
 
-print(paste("Plotting for instrument", inst))
+cat(c("Plotting for instrument", inst, "\n"))
 
 # plot config
 dev.type <- "pdf"
 width   <- 10
 height  <- 4.44
 units   <- "in"
-plot_dir <- "../plots/"
 # Data config
 win_frac <- 1
 wel_frac <- 1
 all_frac <- 1
 
-wel_vars <- c("WelSurplus", "WelMax", "WelEfficiency", "CEdiff", "Prob")
-wel_var  <- wel_vars[1]
-
 # Full data plot
-do_win_all <- T
-do_win_ind <- T
+do_win_all <- F
+do_win_ind <- F
 
-do_wel_all <- T
+do_wel_all <- F
 do_wel_ind <- T
 
-do_ep_wel <- T
+do_ep_wel <- F
 
 # Get the Data
-load(paste0("../data/classify/full/", inst, "-bak.Rda"))
+load(paste0(data_dir, inst, "-fitted.Rda"))
 FDAT <- get(inst)
 rm(list = inst)
 
@@ -349,73 +319,50 @@ win_vars <- c("win_05", "default")
 
 for (win_var in win_vars) {
 
-	print(paste("win_var is", win_var))
+	cat(c(rep(" ", 2), "Win_var is", win_var, "\n"))
 
 if (do_win_all) {
 	RDAT <- FDAT %>%
-		select_(win_var, "r", "mu", "model") %>%
-		filter(model == "EUT" | model == "prelec")
+		select_(~starts_with(win_var), "r", "mu", "alpha", "beta", "model")
 
-	p <- plot_win(RDAT , "mu", win_var)
+	p <- plot_win(dat = RDAT , par = c("mu"), models = mods, win_var = win_var)
 
-	ggsave(paste0(win_var, "-mu-", inst, ".", dev.type), plot = p, device = dev.type, path = plot_dir, width = width, height = height * 2, units = units)
+	ggsave(paste0(win_var, "-all-win-", inst, ".", dev.type), plot = p, device = dev.type, path = plot_dir, width = width, height = height * 2, units = units)
 
 	rm(list = c("p", "RDAT"))
 }
 
 if (do_wel_all) {
 	RDAT <- FDAT %>%
-		select_(win_var, "r", "mu", "model", ~starts_with("real"), ~ends_with(wel_var)) %>%
-		filter(model == "EUT" | model == "prelec") %>%
-		filter_(!is.na(win_var), "r" > 0)
+		select_(~starts_with(win_var), "r", "mu", "alpha", "beta", "model")
 
-	p <- plot_wel(RDAT, "mu", wel_var, win_var)
+	p <- plot_wel(dat = RDAT, par = c("mu"), models = mods, wel_var = wel_var, win_var = win_var)
 
-	ggsave(paste0(win_var, "-mu-", inst, ".", dev.type), plot = p, device = dev.type, path = plot_dir, width = width, height = height, units = units)
+	ggsave(paste0(win_var, "-mu-wel-", inst, ".", dev.type), plot = p, device = dev.type, path = plot_dir, width = width, height = height, units = units)
 
 	rm(list = c("p", "RDAT"))
 }
 
 if (do_win_ind) {
 	RDAT <- FDAT %>%
-		select_(win_var, "r", "mu", "alpha", "beta", "model")
+		select_(~starts_with(win_var), "r", "mu", "alpha", "beta", "model")
 
-	mod <- "Prelec"
-	p <- plot_win_ind(RDAT %>% filter(model == "prelec"), c("alpha", "beta"), mod = mod, win_var = win_var)
-	ggsave(paste0(win_var, "-", mod, "-", inst, ".", dev.type), plot = p, device = dev.type, path = plot_dir, width = width, height = 2*height, units = units)
-
-	mod <- "EUT"
-	p <- plot_win_ind(RDAT %>% filter(model == "EUT"), c("r", "mu"), mod = mod, win_var = win_var)
-	ggsave(paste0(win_var, "-", mod, "-", inst, ".", dev.type), plot = p, device = dev.type, path = plot_dir, width = width, height = 2*height, units = units)
+	for (mod in mods) {
+		p <- plot_win(filter(RDAT, model == mod) , par = par_model(mod), models = mod, win_var = win_var)
+		ggsave(paste0(win_var, "-", mod, "-win-",  inst, ".", dev.type), plot = p, device = dev.type, path = plot_dir, width = width, height = 2*height, units = units)
+	}
 
 	rm(list = c("p", "RDAT"))
 }
 
 if (do_wel_ind) {
 	RDAT <- FDAT %>%
-		select_(win_var, "r", "mu", "alpha", "beta", "model", ~starts_with(paste0("real_", wel_var)), ~ends_with(wel_var)) %>%
-		filter_(!is.na(win_var))
+		select_(~starts_with(win_var), "r", "mu", "alpha", "beta", "model")
 
-	mod <- "Prelec"
-	p <- plot_wel_ind(RDAT %>% filter(model == "prelec"), c("alpha", "beta"), wel_var = wel_var, mod = mod, win_var = win_var)
-	ggsave(paste0(win_var, "-", mod, "-", inst, ".", dev.type), plot = p, device = dev.type, path = plot_dir, width = width, height = height, units = units)
-
-	mod <- "EUT"
-	p <- plot_wel_ind(RDAT %>% filter(model == "EUT"), c("r", "mu"), wel_var = wel_var, mod = mod, win_var = win_var)
-	ggsave(paste0(win_var, "-", mod, "-", inst, ".", dev.type), plot = p, device = dev.type, path = plot_dir, width = width, height = height, units = units)
-
-	rm(list = c("p", "RDAT"))
-}
-
-if (do_wel_all) {
-	RDAT <- FDAT %>%
-		select_(win_var, "r", "mu", "model", ~starts_with("real"), ~ends_with(wel_var)) %>%
-		filter(model == "EUT" | model == "prelec") %>%
-		filter_(!is.na(win_var), "r" > 0)
-
-	p <- plot_wel(RDAT , "mu", wel_var, win_var)
-
-	ggsave(paste0(win_var, "-mu-", inst, ".", dev.type), plot = p, device = dev.type, path = plot_dir, width = width, height = height, units = units)
+	for (mod in mods) {
+		p <- plot_wel(filter(RDAT, model == mod) , par = par_model(mod), models = mod, wel_var = wel_var, win_var = win_var)
+		ggsave(paste0(win_var, "-", mod, "-wel-", inst, ".", dev.type), plot = p, device = dev.type, path = plot_dir, width = width, height = height, units = units)
+	}
 
 	rm(list = c("p", "RDAT"))
 }
@@ -437,10 +384,10 @@ if (do_ep_wel) {
 		select_(~starts_with("real"), ~ends_with("Est"), ~ends_with(wel_var),
 		~starts_with("PRE"), win_var, "r", "alpha", "beta", "mu")
 
-	print("Beginning with Prelec welfare5 alpha")
+	cat("Beginning with Prelec welfare5 alpha\n")
 	p.prea <- welfare5(RDAT, "Prelec", "alpha", wel_var, win_var)
 
-	print("Beginning with Prelec welfare5 beta")
+	cat("Beginning with Prelec welfare5 beta\n")
 	p.preb <- welfare5(RDAT, "Prelec", "beta", wel_var, win_var)
 
 	rm(RDAT)
@@ -470,12 +417,6 @@ if (do_ep_wel) {
 
 }
 
-instruments <- c("HNG", "HNG_1", "HO", "LMS20", "LMS30", "SH")
-instruments <- c("HNG_1", "HNG")
-instruments <- c("HNG_1")
-
-for(i in instruments) {
-	per_inst(i)
-}
+c.lapply(insts, per_inst)
 
 print(warnings())
