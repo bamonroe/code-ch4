@@ -30,6 +30,8 @@ fit_gam <- function(win_mod, dat, mod, wel_var, class_var) {
 
 	dat$wel <- dat[[paste0(win_mod, "_", wel_var)]] - dat[[paste0("real_", wel_var)]]
 
+	#dat %>% apply(1, factor) %>% t %>% as.data.frame %>% select_("win", class_var, "model", "wel") %>% summary %>% print
+
 	cat(c(rep(" ",8),"Fitting Welfare","\n"))
 	if (mod == "EUT") {
 		wfit <- gam(wel ~ s(r) + s(mu), data = dat)
@@ -46,8 +48,7 @@ fit_gam <- function(win_mod, dat, mod, wel_var, class_var) {
 	return(list(prob = pfit, wel = wfit))
 }
 
-fitter <- function(inst, mods) {
-
+fitter <- function(inst) {
 	#dbug <- 1
 	#print(paste("here", dbug)) ; dbug <- dbug + 1
 
@@ -56,7 +57,7 @@ fitter <- function(inst, mods) {
 
 	load(paste0(data_dir, inst, load_suffix))
 
-	cat(c("\nFitting for", inst),"\n")
+	cat(c("\n", "Fitting for", inst),"\n")
 
 	# Load the instrument into a known var
 	dat <- get(inst)
@@ -65,7 +66,7 @@ fitter <- function(inst, mods) {
 
 		cat(c(rep(" ",2),"Class Var:", class_var),"\n")
 
-		gam_fits <- lapply(mods, function(mod) {
+		gam_fits <- lapply(pop_mods, function(mod) {
 			cat(c(rep(" ",4),"Mod:", mod),"\n")
 			mmods <- c(mods)
 			dat0  <- dat[which(dat[[class_var]] != "NA"),]
@@ -75,7 +76,7 @@ fitter <- function(inst, mods) {
 			return(out)
 		})
 
-		gam_fits_na <- lapply(mods, function(mod) {
+		gam_fits_na <- lapply(pop_mods, function(mod) {
 			cat(c(rep(" ",4),"NA Mod:", mod),"\n")
 			mmods <- c(mods, "NA")
 			out   <- lapply(mmods, fit_gam,
@@ -84,8 +85,8 @@ fitter <- function(inst, mods) {
 			return(out)
 		})
 
-		names(gam_fits) <- mods
-		names(gam_fits_na) <- mods
+		names(gam_fits)    <- pop_mods
+		names(gam_fits_na) <- pop_mods
 
 		fit_name    <- paste0(inst, "_", class_var, "_fit")
 		fit_name_na <- paste0(fit_name, "_na")
@@ -100,5 +101,5 @@ fitter <- function(inst, mods) {
 
 }
 
-c.lapply(insts, fitter, mods = mods)
+c.lapply(insts, fitter)
 

@@ -8,8 +8,8 @@ mkmini_1 <- function(inst, mods) {
 
 	dat <- get(inst)
 
-	# Reduce the dataset to only include models we care about, and sample as necessary
-	dat0 <- lapply(mods, function(mod) {
+	# Reduce the dataset to only include models we care about, given by pop_mods, and sample as necessary
+	dat0 <- lapply(pop_mods, function(mod) {
 		dat %>%
 			filter(model == mod) %>%
 			sample_frac(mini_frac)

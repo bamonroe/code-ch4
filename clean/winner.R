@@ -9,11 +9,11 @@ mkwin <- function(inst){
 	dat <- get(inst)
 
 	# Apply the exclusionary rules
-	for (m in mods) {
-		var <- paste0(m, "_r_Est")
-		dat[which((dat[[var]] > 0.99) & (dat[[var]] < 1.01)), grep(m, names(dat)) ] <- NA
-		dat[which(dat[[var]] < -15), grep(m, names(dat)) ] <- NA
-		dat[which(dat[[var]] > 15),  grep(m, names(dat)) ] <- NA
+	for (mod in mods) {
+		var <- paste0(mod, "_r_Est")
+		dat[which((dat[[var]] > 0.99) & (dat[[var]] < 1.01)), grep(mod, names(dat)) ] <- NA
+		dat[which(dat[[var]] < -15), grep(mod, names(dat)) ] <- NA
+		dat[which(dat[[var]] > 15),  grep(mod, names(dat)) ] <- NA
 	}
 	dat[which(dat$PRE_beta_Est > 20.00), grep("PRE", names(dat))] <- NA
 
@@ -28,6 +28,11 @@ mkwin <- function(inst){
 	for (def in defaults) {
 		dat$default <- ifelse(!is.na(dat[[paste0(def, "_pval")]]), def, dat$default)
 	}
+
+#	print("win")
+#	dat$win_05 %>% factor %>% summary %>% print
+#	print("default")
+#	dat$default %>% factor %>% summary %>% print
 
 	#win <- dat %>% select(starts_with("win"), model)
 	#win.p <- win %>% filter(model == "PRE") %>% apply(1, factor) %>% t

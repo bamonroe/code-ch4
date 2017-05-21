@@ -1,10 +1,3 @@
-library(dplyr)
-library(ggplot2)
-library(cowplot)
-library(MSL)
-
-theme_set(theme_grey())
-
 label_fun <- function(mnames) {
 	ifelse(mnames == "EUT", "EUT",
 		 ifelse(mnames == "POW", "RDU Power",
@@ -14,15 +7,41 @@ label_fun <- function(mnames) {
 							ifelse(mnames == "Expected", "Expected", mnames))))))
 }
 
+wv_label_fun <- function(mnames) {
+
+	nnames <- list(win_05 = "Win at 5%", default = "Default")
+
+	for (win_var in win_vars) {
+		mnames <- ifelse(mnames == win_var, nnames[[win_var]], mnames)
+		for (inst in insts) {
+			mnames <- ifelse(mnames == paste0(inst, "_", win_var), paste(inst, nnames[[win_var]], collapse = " "), mnames)
+		}
+	}
+
+}
+
 par_model <- function(mnames) {
 	if (mnames == "EUT") {
-		out <- c("r")
+		out <- c("r", "mu")
 	} else if (mnames == "POW") {
 		out <- c("alpha")
 	} else if (mnames == "INV") {
 		out <- c("alpha")
 	} else if (mnames == "PRE") {
-		out <- c("alpha", "beta")
+		out <- c("r", "mu", "alpha", "beta")
+	}
+	return(out)
+}
+
+ylim_model <- function(mnames) {
+	if (mnames == "EUT") {
+		out <- c(-10, 0)
+	} else if (mnames == "POW") {
+		out <- c(-20, 0)
+	} else if (mnames == "INV") {
+		out <- c(-20, 0)
+	} else if (mnames == "PRE") {
+		out <- c(-25, 0)
 	}
 	return(out)
 }
@@ -83,8 +102,8 @@ plot_win <- function(dat, par, models, win_var) {
 	rm(dat1, dat2)
 
 	# Make "model" an integer so it can be easily factored
-	for (mod in mods) {
-		dat[which(dat$model == mod), "model"] <- which(mods == mod)
+	for (mod in pop_mods) {
+		dat[which(dat$model == mod), "model"] <- which(pop_mods == mod)
 	}
 
 	# duplicate dataset for each parameter to be used
@@ -102,14 +121,16 @@ plot_win <- function(dat, par, models, win_var) {
 	rm(dat0)
 
 	# Factor things
-	dat$conv  <- factor(dat$conv,  levels = 1:2,             labels = c("Converged Only", "All Data"))
-	dat$win   <- factor(dat$win,   levels = 1:length(mmods), labels = label_fun(mmods))
-	dat$model <- factor(dat$model, levels = 1:length(mods),  labels = label_fun(mods))
-	dat$par_grp <- factor(dat$par_grp, levels = 1:length(par), labels = par)
+	dat$conv  <- factor(dat$conv,  levels = 1:2,                labels = c("Converged Only", "All Data"))
+	dat$win   <- factor(dat$win,   levels = 1:length(mmods),    labels = label_fun(mmods))
+	dat$model <- factor(dat$model, levels = 1:length(pop_mods), labels = label_fun(pop_mods))
+	dat$par_grp <- factor(dat$par_grp, levels = 1:length(par),  labels = par)
 
 	dat <- dat %>%
 		select_("par", "par_grp", "model", "point", "U95", "L95", "win", "conv") %>%
 		filter(!is.na(point))
+
+	#dat %>% summary %>% print
 
 	cat(c(rep(" ", 4), "Now plotting with", nrow(dat), "rows", "\n"))
 
@@ -134,7 +155,7 @@ plot_win <- function(dat, par, models, win_var) {
 	return(p)
 }
 
-plot_wel <- function(dat, par, models, wel_var, win_var) {
+plot_wel <- function(dat, par, models, wel_var, win_var, ylim = c(-45, 5)) {
 	#dbug <- 1
 	#print(paste0("here", dbug)) ; dbug <- dbug + 1
 
@@ -179,8 +200,8 @@ plot_wel <- function(dat, par, models, wel_var, win_var) {
 	dat <- do.call(rbind, dat1)
 
 	# Make "model" an integer so it can be easily factored
-	for (mod in mods) {
-		dat[which(dat$model == mod), "model"] <- which(mods == mod)
+	for (mod in pop_mods) {
+		dat[which(dat$model == mod), "model"] <- which(pop_mods == mod)
 	}
 
 	# duplicate dataset for each parameter to be used
@@ -197,9 +218,9 @@ plot_wel <- function(dat, par, models, wel_var, win_var) {
 	}
 	rm(dat0)
 
-	dat$win     <- factor(dat$win,     levels = 1:length(mmods), labels = label_fun(mmods))
-	dat$model   <- factor(dat$model,   levels = 1:length(mmods), labels = label_fun(mmods))
-	dat$par_grp <- factor(dat$par_grp, levels = 1:length(par),   labels = par)
+	dat$win     <- factor(dat$win,     levels = 1:length(mmods),    labels = label_fun(mmods))
+	dat$model   <- factor(dat$model,   levels = 1:length(pop_mods), labels = label_fun(pop_mods))
+	dat$par_grp <- factor(dat$par_grp, levels = 1:length(par),      labels = par)
 
 	dat <- dat %>%
 		select_("par", "par_grp", "model", "point", "U95", "L95", "win") %>%
@@ -222,7 +243,95 @@ plot_wel <- function(dat, par, models, wel_var, win_var) {
 		xlab <- "Parameter Value"
 	}
 
-	p <- p + coord_cartesian(ylim = c(-45, 15))
+	p <- p + coord_cartesian(ylim = ylim)
+	p <- p + labs(title = title, x = xlab, y = paste("Value of Estimated", wel_var, "- Real", wel_var), color = "Classified Model")
+	p <- p + theme(plot.title = element_text(hjust = 0.5), legend.position = "bottom")
+	
+	return(p)
+}
+
+plot_exwel <- function(dat, par, models, wel_var, class_vars = win_vars, ylim = c(-45, 5)) {
+	#dbug <- 1
+	#print(paste0("here", dbug)) ; dbug <- dbug + 1
+
+	if (length(par) > 1 & length(models) > 1) 
+		stop(paste("Pars is of length", length(par), ", and Models is of length", length(models), ", this is wrong"))
+	else if (length(models) > 1)
+		do_by <- "model"
+	else
+		do_by <- "par"
+
+	# How many subjects do we have? To put in Title
+	N <- nrow(dat)
+
+	# How many cols for the wrapping
+	wrap_cols <- ceiling(sqrt(length(par)))
+
+	# Define the plot title
+	title_mods <- paste(label_fun(models), collapse = ", ")
+	title      <- paste(title_mods, "Subjects, N = ", N)
+
+	cat(c(rep(" ", 4), "Plotting Welfare for", title_mods, "\n"))
+
+	dat$point <- NA
+	dat$win   <- NA
+
+	dat1 <- lapply(class_vars, function(ww) {
+		dat0       <- dat
+		dat0$point <- dat0[[paste0(ww, "_ewel_point")]]
+		dat0$win   <- which(class_vars == ww)
+		return(dat0)
+	})
+
+	dat <- do.call(rbind, dat1)
+
+	# Make "model" an integer so it can be easily factored
+	for (mod in pop_mods) {
+		dat[which(dat$model == mod), "model"] <- which(pop_mods == mod)
+	}
+
+	# duplicate dataset for each parameter to be used
+	row0 <- nrow(dat)
+	dat0 <- dat
+	dat  <- dat[rep(seq_len(row0), length(par)), ]
+	dat$par <- NA
+	dat$par_grp <- NA
+	for (i in 1:length(par)) {
+		start <- (i-1)*row0 + 1
+		end   <- i*row0
+		dat$par[start:end]     <- dat0[[par[i]]]
+		dat$par_grp[start:end] <- i
+	}
+	rm(dat0)
+
+#	cat("\n\n\n")
+#	class_vars %>% print
+#	wv_label_fun(class_vars) %>% print
+#	cat("\n\n\n")
+
+	dat$win     <- factor(dat$win,     levels = 1:length(class_vars), labels = class_vars)
+	dat$model   <- factor(dat$model,   levels = 1:length(mods), labels = label_fun(mods))
+	dat$par_grp <- factor(dat$par_grp, levels = 1:length(par),  labels = par)
+
+	dat <- dat %>%
+		select_("par", "par_grp", "model", "point", "win") %>%
+		filter(!is.na(point))
+
+	cat(c(rep(" ", 4), "Now plotting welfare with", nrow(dat), "rows", "\n"))
+
+	p <- ggplot(dat, aes_string(x = "par", y = "point", color = "win", linetype = "win"))
+	p <- p + geom_smooth(span = 0.15, se = F)
+
+	if (do_by == "model") {
+		p    <- p + facet_wrap(~model, ncol = wrap_cols)
+		xlab <- paste(par, "Value")
+	}
+	else if (do_by == "par") {
+		p    <- p + facet_wrap(~par_grp, ncol = wrap_cols, scales = "free_x")
+		xlab <- "Parameter Value"
+	}
+
+	p <- p + coord_cartesian(ylim = ylim)
 	p <- p + labs(title = title, x = xlab, y = paste("Value of Estimated", wel_var, "- Real", wel_var), color = "Classified Model")
 	p <- p + theme(plot.title = element_text(hjust = 0.5), legend.position = "bottom")
 	
@@ -291,31 +400,15 @@ per_inst <- function(inst) {
 
 cat(c("Plotting for instrument", inst, "\n"))
 
-# plot config
-dev.type <- "pdf"
-width   <- 10
-height  <- 4.44
-units   <- "in"
-# Data config
-win_frac <- 1
-wel_frac <- 1
-all_frac <- 1
-
-# Full data plot
-do_win_all <- F
-do_win_ind <- F
-
-do_wel_all <- F
-do_wel_ind <- T
-
-do_ep_wel <- F
+inst_plot_dir <- paste0(plot_dir, "/", inst, "/")
+if (!dir.exists(inst_plot_dir)) {
+	dir.create(inst_plot_dir, recursive = T)
+}
 
 # Get the Data
 load(paste0(data_dir, inst, "-fitted.Rda"))
 FDAT <- get(inst)
 rm(list = inst)
-
-win_vars <- c("win_05", "default")
 
 for (win_var in win_vars) {
 
@@ -327,7 +420,7 @@ if (do_win_all) {
 
 	p <- plot_win(dat = RDAT , par = c("mu"), models = mods, win_var = win_var)
 
-	ggsave(paste0(win_var, "-all-win-", inst, ".", dev.type), plot = p, device = dev.type, path = plot_dir, width = width, height = height * 2, units = units)
+	ggsave(paste0(win_var, "-all-win-", inst, ".", dev.type), plot = p, device = dev.type, path = inst_plot_dir, width = width, height = height * 2, units = units)
 
 	rm(list = c("p", "RDAT"))
 }
@@ -338,7 +431,7 @@ if (do_wel_all) {
 
 	p <- plot_wel(dat = RDAT, par = c("mu"), models = mods, wel_var = wel_var, win_var = win_var)
 
-	ggsave(paste0(win_var, "-mu-wel-", inst, ".", dev.type), plot = p, device = dev.type, path = plot_dir, width = width, height = height, units = units)
+	ggsave(paste0(win_var, "-mu-wel-", inst, ".", dev.type), plot = p, device = dev.type, path = inst_plot_dir, width = width, height = height, units = units)
 
 	rm(list = c("p", "RDAT"))
 }
@@ -347,9 +440,9 @@ if (do_win_ind) {
 	RDAT <- FDAT %>%
 		select_(~starts_with(win_var), "r", "mu", "alpha", "beta", "model")
 
-	for (mod in mods) {
+	for (mod in pop_mods) {
 		p <- plot_win(filter(RDAT, model == mod) , par = par_model(mod), models = mod, win_var = win_var)
-		ggsave(paste0(win_var, "-", mod, "-win-",  inst, ".", dev.type), plot = p, device = dev.type, path = plot_dir, width = width, height = 2*height, units = units)
+		ggsave(paste0(win_var, "-", mod, "-win-",  inst, ".", dev.type), plot = p, device = dev.type, path = inst_plot_dir, width = width, height = 2*height, units = units)
 	}
 
 	rm(list = c("p", "RDAT"))
@@ -359,9 +452,9 @@ if (do_wel_ind) {
 	RDAT <- FDAT %>%
 		select_(~starts_with(win_var), "r", "mu", "alpha", "beta", "model")
 
-	for (mod in mods) {
-		p <- plot_wel(filter(RDAT, model == mod) , par = par_model(mod), models = mod, wel_var = wel_var, win_var = win_var)
-		ggsave(paste0(win_var, "-", mod, "-wel-", inst, ".", dev.type), plot = p, device = dev.type, path = plot_dir, width = width, height = height, units = units)
+	for (mod in pop_mods) {
+		p <- plot_wel(filter(RDAT, model == mod) , par = par_model(mod), models = mod, wel_var = wel_var, win_var = win_var, ylim = ylim_model(mod))
+		ggsave(paste0(win_var, "-", mod, "-wel-", inst, ".", dev.type), plot = p, device = dev.type, path = inst_plot_dir, width = width, height = height, units = units)
 	}
 
 	rm(list = c("p", "RDAT"))
@@ -371,7 +464,6 @@ if (do_ep_wel) {
 
 	RDAT <- FDAT %>%
 		filter(model == "EUT") %>%
-		filter_(!is.na(win_var)) %>%
 		select_(~starts_with("real"), ~ends_with("Est"), ~ends_with(wel_var),
 		       ~starts_with("EUT"), win_var, "r", "mu")
 
@@ -379,8 +471,7 @@ if (do_ep_wel) {
 	rm(RDAT)
 
 	RDAT <- FDAT %>%
-		filter(model == "prelec") %>%
-		filter_(!~is.na(win_var)) %>%
+		filter(model == "PRE") %>%
 		select_(~starts_with("real"), ~ends_with("Est"), ~ends_with(wel_var),
 		~starts_with("PRE"), win_var, "r", "alpha", "beta", "mu")
 
@@ -410,13 +501,69 @@ if (do_ep_wel) {
 	# Join the actual plots with the legend
 	mm <- plot_grid(mm, legend, ncol =2 , rel_widths = c(1.2, .15))
 
-	cowplot::save_plot(paste0(win_var, "-ep-welfare5.pdf"), mm, device = "pdf", path = plot_dir, base_aspect_ratio = 1.4, base_height = 10)
+	cowplot::save_plot(paste0(win_var, "-ep-welfare5.pdf"), mm, device = "pdf", path = inst_plot_dir, base_aspect_ratio = 1.4, base_height = 10)
 }
 
 }
 
+if (do_exwel_ind) {
+	RDAT <- FDAT %>%
+		select_(~ends_with("_ewel_point"), "r", "mu", "alpha", "beta", "model")
+
+	for (mod in pop_mods) {
+		hmult <- sqrt(length(par_model(mod)))
+		p <- plot_exwel(filter(RDAT, model == mod) , par = par_model(mod), models = mod, wel_var = wel_var, ylim = ylim_model("PRE"))
+		ggsave(paste0(mod, "-exwel-", inst, ".", dev.type), plot = p, device = dev.type, path = inst_plot_dir, scale = 1.2, width = width, height = height * hmult, units = units)
+	}
+
+	rm(list = c("p", "RDAT"))
 }
 
-c.lapply(insts, per_inst)
+}
 
-print(warnings())
+all_inst <- function(insts) {
+
+cat(c("Plotting for all instruments", "\n"))
+
+# Get the Data
+FDAT <- c.lapply(insts, function(inst) {
+	cat(c(rep(" ", 2), "Loading", inst, "\n"))
+	load(paste0(data_dir, inst, "-fitted.Rda"))
+	dat <- get(inst)
+	dat$inst <- inst
+	for (win_var in win_vars) {
+		dat[[paste0(inst, "_", win_var, "_ewel_point")]] <- dat[[paste0(win_var, "_ewel_point")]]
+	}
+	return(dat)
+})
+
+dnames <- lapply(FDAT, names) %>% unlist %>% unique
+
+FDAT <- lapply(FDAT, function(dat) {
+	onames  <- names(dat)
+	nonames <- dnames[which(! dnames %in% onames)]
+	dat[,nonames] <- NA
+	return(dat)
+})
+
+FDAT <- do.call(rbind, FDAT)
+
+FDAT <- FDAT %>%
+	select(ends_with("_ewel_point"), r, mu, alpha, beta, model)
+
+new_vars <- c()
+for (inst in insts) {
+	for (win_var in win_vars) {
+		new_vars <- c(new_vars, paste0(inst, "_", win_var))
+	}
+}
+
+lapply(pop_mods, function(mod) {
+	hmult <- sqrt(length(par_model(mod)))
+	p <- plot_exwel(filter(FDAT, model == mod) , par = par_model(mod), models = mod, wel_var = wel_var, class_vars = new_vars, ylim = ylim_model("PRE"))
+	ggsave(paste0(mod, "-exwel-full.", dev.type), plot = p, device = dev.type, path = plot_dir, scale = 1.2, width = width, height = height * hmult, units = units)
+})
+
+}
+
+

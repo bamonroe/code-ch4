@@ -1,6 +1,6 @@
 fpred <- function(inst) {
 	#dbug <- 1
-	cat(c("\nInstrument:", inst, "\n"))
+	cat(c("\n","Predicting for:", inst, "\n"))
 
 	dat_load_suffix <- "-bak.Rda"
 	dat_save_suffix <- "-fitted.Rda"
@@ -20,7 +20,7 @@ fpred <- function(inst) {
 		fit    <- get(fit_name)
 		fit_na <- get(fit_name_na)
 
-		dat0 <- lapply(mods, function(mod) {
+		dat0 <- lapply(pop_mods, function(mod) {
 			cat(c(rep(" ", 4), "Mod:", mod), "\n")
 			mmods <- c(mods, "NA")
 			dat1 <- dat %>% filter(model == mod)
