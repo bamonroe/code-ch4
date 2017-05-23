@@ -1,20 +1,17 @@
-library(ggplot2)
-hng_res_dir <- "../data/HNG_res/"
 load(paste0(hng_res_dir, "wel_pval.Rda"))
 
 if (exists("per.choice")) {
-
+	cat("  Plot CS\n")
 	p <- ggplot(per.choice)
 	p <- p + geom_vline(xintercept = 0, color = "red")
 	p <- p + geom_density(aes(WelSurplus), color = "blue")
 	p <- p + labs(title = paste0("N = ", nrow(per.choice), ", Mean = ", round(mean(per.choice$WelSurplus), digits = 2), ", Actual decisions made"), x = "Consumer Surplus ($)", y = "Density")
-	p
 
-	ggsave(filename = "../plots/HNG_CS.pdf", plot = p, device = "pdf")
+	ggsave(filename = paste0(hng_plot_dir, "HNG_CS.pdf"), plot = p, device = "pdf")
 }
 
 if (exists("per.sub")) {
-
+	cat("  Plot Welfare Efficiency\n")
 	per.sub$wel2 <- per.sub$WelSurplus / per.sub$WelMax
 
 	p2 <- ggplot(per.sub)
@@ -23,11 +20,12 @@ if (exists("per.sub")) {
 	p2 <- p2 + labs(title = paste0("N = ", nrow(per.sub), ", Mean = ", round(mean(per.sub$wel2), digits = 2), ", Actual decisions made"), x = "Welfare Efficiency (%)", y = "Density")
 	p2
 
-	ggsave(filename = "../plots/HNG_WE.pdf", plot = p2, device = "pdf")
-
+	ggsave(filename = paste0(hng_plot_dir, "HNG_WE.pdf"), plot = p2, device = "pdf")
 }
 
 if (exists("pvals")) {
+	cat("  Plot P-Vals\n")
+	per.sub$wel2 <- per.sub$WelSurplus / per.sub$WelMax
 	pvals <- pvals[which(!is.na(pvals[,4])),]
 	pvals$Winner <- factor(pvals$Winner, levels = c("EUT", "INV", "POW", "PRE"), labels = c("EUT", "RDU Inverse S", "RDU Power", "RDU Prelec"))
 
@@ -47,7 +45,5 @@ if (exists("pvals")) {
 	s
 
 	mm <- cowplot::plot_grid(r, s, ncol = 2)
-	mm
-	cowplot::save_plot("../plots/HNG_pvals.pdf", mm, device = "pdf", base_aspect_ratio = 2, base_height = 6)
-
+	cowplot::save_plot(paste0(hng_plot_dir, "HNG_pvals.pdf"), mm, device = "pdf", base_aspect_ratio = 2, base_height = 6)
 }

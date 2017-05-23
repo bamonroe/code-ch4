@@ -1,12 +1,8 @@
-library(dplyr)
-library(haven)
-
 ##################
 ## First the lottery data
 ##################
 
-hng_dir <- "../data/HNG/"
-DAT <- read_dta(paste0(hng_dir, "insr_data.dta"))
+DAT <- read_dta(paste0(hng_data_dir, "insr_data.dta"))
 
 # Rename things into my naming convention and drop non-lottery data
 DAT <- tbl_df(DAT)
@@ -59,7 +55,7 @@ DAT <- DAT
 ##################
 
 # Read in insurance data and drop non-insurance stuff
-INS <- read_dta(paste0(hng_dir, "choices_insurance.dta"))
+INS <- read_dta(paste0(hng_data_dir, "choices_insurance.dta"))
 INS <- tbl_df(INS)
 INS <- INS %>%
 	select(-ZtreeID, -ExcenID, -ExptID, -IDnum) %>%
@@ -98,5 +94,4 @@ DAT <- rbind(DAT,INS) %>%
 rm(list=c("INS", "pSid", "DAT.names", "qid"))
 
 # Save into R
-hng_res_dir <- "../data/HNG_res/"
 save(DAT, file=paste0(hng_res_dir, "HNG.Rda"))

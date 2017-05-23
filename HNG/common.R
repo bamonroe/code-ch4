@@ -1,5 +1,3 @@
-library(dplyr)
-hng_res_dir <- "../data/HNG_res/"
 load(paste0(hng_res_dir, "filtered.Rda"))
 
 # What are the convergence statistics for both of us

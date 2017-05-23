@@ -1,7 +1,4 @@
 # Load the HNG cleaned data
-library(ctools)
-c.library("MSL", "dplyr")
-hng_res_dir <- "../data/HNG_res/"
 load(paste0(hng_res_dir, "HNG.Rda"))
 
 HNG <- DAT %>%

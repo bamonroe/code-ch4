@@ -1,12 +1,6 @@
-library(dplyr)
-library(haven)
-library(MSL)
-
 opt <- "nr"
-hng_dir     <- "../data/HNG/"
-hng_res_dir <- "../data/HNG_res/"
 
-ind_est <- read_dta(paste0(hng_dir, "individual_estimates_", opt, ".dta"))
+ind_est <- read_dta(paste0(hng_data_dir, "individual_estimates_", opt, ".dta"))
 load(paste0(hng_res_dir, "HNG_est.Rda"))
 
 hng.df <- ind_est %>%
@@ -43,19 +37,19 @@ suffixes <- c(ll = "LL", eut = "pval", converged = "convcode")
 
 for (m in names(models)) {
 	for (s in names(suffixes)) {
-			Gm <- m
-			Gs <- s
+		Gm <- m
+		Gs <- s
 
-			Bm <- models[[m]]
-			Bs <- suffixes[[s]]
+		Bm <- models[[m]]
+		Bs <- suffixes[[s]]
 
-			Gname <- paste0(Gm, "_", Gs) 
-			Bname <- paste0(Bm, "_", Bs)
+		Gname <- paste0(Gm, "_", Gs) 
+		Bname <- paste0(Bm, "_", Bs)
 
-			if (! Gname %in% names(hng.df)) next
+		if (! Gname %in% names(hng.df)) next
 
-			hng.df[[Bname]] <- hng.df[[Gname]]
-			hng.df[[Gname]] <- NULL
+		hng.df[[Bname]] <- hng.df[[Gname]]
+		hng.df[[Gname]] <- NULL
 	}
 }
 

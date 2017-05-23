@@ -1,12 +1,7 @@
-library(ctools)
-c.library("MSL", "welfare", "dplyr", "ggplot2")
-
 do.choice  <- T
 do.sub     <- T
 do.pval    <- T
 
-hng_dir <- "../data/HNG/"
-hng_res_dir <- "../data/HNG_res/"
 load(paste0(hng_res_dir, "filtered.Rda"))
 load(paste0(hng_res_dir, "HNG.Rda"))
 
