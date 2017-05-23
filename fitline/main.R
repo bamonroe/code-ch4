@@ -7,6 +7,7 @@ if (!exists("from_main")) {
 
 do_fit   <- T # Fit the Gam models
 do_fpred <- T # Make predictions based on the fitted models
+
 do_ppred <- F # Make predictions based on the fitted models
 do_pred_plot  <- F # Plot the predicted lines
 do_csv   <- F # make simulated population formatted in a way to be useful in latex

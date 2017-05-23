@@ -18,15 +18,15 @@ do_wel_all   <- T
 do_wel_ind   <- T
 do_exwel_ind <- T
 
-do_ep_wel    <- F
+do_exwel_diff_ind <- F
 
-do_all_insts <- T
+do_all_insts <- F
 
 theme_set(theme_grey())
 
 c.source("newplot.R")
 
-if (do_win_all | do_win_ind | do_wel_all | do_wel_ind | do_exwel_ind) {
+if (do_win_all | do_win_ind | do_wel_all | do_wel_ind | do_exwel_ind | do_exwel_diff_ind) {
 	c.lapply(insts, per_inst)
 }
 
