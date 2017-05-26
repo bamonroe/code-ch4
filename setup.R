@@ -9,7 +9,9 @@ wel_vars <- c("WelSurplus", "WelMax", "WelEfficiency", "CEdiff", "Prob")
 wel_var  <- wel_vars[1]
 
 # Directories of note
-merged_dir   <- paste0(getwd(), "/data/raw/merged")
+raw_dir      <- paste0(getwd(), "/data/raw/")
+est_dir      <- paste0(getwd(), "/data/raw/est_merged/")
+merged_dir   <- paste0(getwd(), "/data/raw/merged/")
 data_dir     <- paste0(getwd(), "/data/full/")
 fit_dir      <- paste0(getwd(), "/data/lo_fits/")
 plot_dir     <- paste0(getwd(), "/plots/")
