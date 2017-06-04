@@ -1,5 +1,8 @@
+trans <- function(x) {x}
+trans <- function(x) {exp(x) / (1 + exp(x))}
+
 fpred <- function(inst) {
-	#dbug <- 1
+	dbug <- 1
 	cat(c("\n","Predicting for:", inst, "\n"))
 
 	dat_load_suffix <- "-bak.Rda"
@@ -7,7 +10,16 @@ fpred <- function(inst) {
 	load(paste0(data_dir, inst, dat_load_suffix))
 	dat <- get(inst)
 
-	for (class_var in win_vars) {
+
+	mmods <- c(mods, "NA")
+	all_names <- c()
+	for(mmod in mmods){
+		for (class_var in win_vars) {
+			all_names <- c(all_names, paste0(class_var, "_", mmod))
+		}
+	}
+
+	dat2 <- c.lapply(win_vars, function(class_var) {
 		cat(c(rep(" ", 2), "Class var:", class_var, "\n"))
 
 		fit_name        <- paste0(inst, "_", class_var, "_fit")
@@ -20,46 +32,20 @@ fpred <- function(inst) {
 		fit    <- get(fit_name)
 		fit_na <- get(fit_name_na)
 
-		dat0 <- lapply(pop_mods, function(mod) {
-			cat(c(rep(" ", 4), "Mod:", mod), "\n")
-			mmods <- c(mods, "NA")
-			dat1 <- dat %>% filter(model == mod)
-			for (mmod in mmods) {
-				cat(c(rep(" ", 6), "MMod:", mmod, "\n"))
+		dat0 <- lapply(pop_mods, fpred_insides, dat = dat, class_var = class_var, fit = fit, fit_na = fit_na)
+		dat0 <- do.call(rbind, dat0)
+		dat0
 
-				# Calculate the number of standard errors needed to get to confidence interval
-				conf_interval <- 0.95
-				conf_se       <- abs(qnorm((1 - conf_interval)/2))
-				vname <- paste0(class_var, "_", mmod)
+	})
 
-				cat(c(rep(" ", 8), "Predicting Prob - NA", "\n"))
-				pred_na  <- predict(fit_na[[mod]][[mmod]][["prob"]], dat1, se.fit = T)
-				dat1[[paste0(vname, "_prob_na")]]     <- pred_na$fit
-				dat1[[paste0(vname, "_prob_na_se")]]  <- pred_na$se.fit
-				dat1[[paste0(vname, "_prob_na_U95")]] <- pred_na$fit + (pred_na$se.fit * conf_se)
-				dat1[[paste0(vname, "_prob_na_L95")]] <- pred_na$fit - (pred_na$se.fit * conf_se)
+	dat2 <- do.call(cbind, dat2)
 
-				# Don't predict welfare for "NA" - we don't have any welfare predictions anyway
-				if (mmod != "NA") {
-					cat(c(rep(" ", 8), "Predicting Prob", "\n"))
-					pred  <- predict(fit[[mod]][[mmod]][["prob"]], dat1, se.fit = T)
-					dat1[[paste0(vname, "_prob")]]     <- pred$fit
-					dat1[[paste0(vname, "_prob_se")]]  <- pred$se.fit
-					dat1[[paste0(vname, "_prob_U95")]] <- pred$fit + (pred$se.fit * conf_se)
-					dat1[[paste0(vname, "_prob_L95")]] <- pred$fit - (pred$se.fit * conf_se)
+	# Initialize all the variables
+	dat <- cbind(dat, dat2)
 
-					cat(c(rep(" ", 8), "Predicting Wel", "\n"))
-					pred  <- predict(fit[[mod]][[mmod]][["wel"]], dat1, se.fit = T)
-					dat1[[paste0(vname, "_wel")]]     <- pred$fit
-					dat1[[paste0(vname, "_wel_se")]]  <- pred$se.fit
-					dat1[[paste0(vname, "_wel_U95")]] <- pred$fit + (pred$se.fit * conf_se)
-					dat1[[paste0(vname, "_wel_L95")]] <- pred$fit - (pred$se.fit * conf_se)
-				}
-			}
-			return(dat1)
-		})
-		dat <- do.call(rbind, dat0)
-
+	#print(paste0("Here: ", dbug)) ; dbug <- dbug + 1
+	for (class_var in win_vars) {
+		cat(c(rep(" ", 2), "Calculating Expectations for Class var:", class_var, "\n"))
 		# Expected welfare - point estimates only...
 		ewel <- paste0(class_var, "_ewel_point")
 		dat[[ewel]] <- 0
@@ -68,7 +54,6 @@ fpred <- function(inst) {
 			wname <- paste0(class_var, "_", mod, "_wel")
 			dat[[ewel]] <- dat[[ewel]] + (dat[[pname]] * dat[[wname]])
 		}
-
 	}
 	#dat %>% head %>% print
 	assign(inst, dat)
@@ -76,4 +61,54 @@ fpred <- function(inst) {
 	save(list = inst, file = paste0(data_dir, inst, dat_save_suffix))
 }
 
-c.lapply(insts, fpred)
+fpred_insides <- function(mod, dat, class_var, fit, fit_na) {
+	cat(c(rep(" ", 4), "Mod:", mod), "\n")
+	mmods <- c(mods, "NA")
+	dat1 <- dat %>% filter(model == mod)
+	for (mmod in mmods) {
+		cat(c(rep(" ", 6), "MMod:", mmod, "\n"))
+
+		# Calculate the number of standard errors needed to get to confidence interval
+		conf_interval <- 0.95
+		conf_se       <- abs(qnorm((1 - conf_interval)/2))
+		vname <- paste0(class_var, "_", mmod)
+
+		cat(c(rep(" ", 8), "Predicting Prob - NA", "\n"))
+		pred  <- predict(fit_na[[mod]][[mmod]][["prob"]], dat1, se.fit = T, type = "link")
+		dat1[[paste0(vname, "_prob_na")]]     <- trans( pred$fit )
+		dat1[[paste0(vname, "_prob_na_se")]]  <- pred$se.fit
+		dat1[[paste0(vname, "_prob_na_U95")]] <- trans( preda$fit + (pred$se.fit * conf_se) )
+		dat1[[paste0(vname, "_prob_na_L95")]] <- trans( preda$fit - (pred$se.fit * conf_se) )
+
+		# Don't predict welfare for "NA" - we don't have any welfare predictions anyway
+		if (mmod != "NA") {
+			cat(c(rep(" ", 8), "Predicting Prob", "\n"))
+			pred  <- predict(fit[[mod]][[mmod]][["prob"]], dat1, se.fit = T, type = "link")
+			dat1[[paste0(vname, "_prob")]]     <- trans( pred$fit )
+			dat1[[paste0(vname, "_prob_se")]]  <- pred$se.fit
+			dat1[[paste0(vname, "_prob_U95")]] <- trans( pred$fit + (pred$se.fit * conf_se) )
+			dat1[[paste0(vname, "_prob_L95")]] <- trans( pred$fit - (pred$se.fit * conf_se) )
+
+			cat(c(rep(" ", 8), "Predicting Wel", "\n"))
+			pred  <- predict(fit[[mod]][[mmod]][["wel"]], dat1, se.fit = T, type = "link")
+			dat1[[paste0(vname, "_wel")]]     <- trans( pred$fit )
+			dat1[[paste0(vname, "_wel_se")]]  <- pred$se.fit
+			dat1[[paste0(vname, "_wel_U95")]] <- trans( pred$fit + (pred$se.fit * conf_se) )
+			dat1[[paste0(vname, "_wel_L95")]] <- trans( pred$fit - (pred$se.fit * conf_se) )
+		}
+	}
+
+	mname <- paste0(class_var, "_", mmods, collapse = "|")
+	mname <- paste0(mname, "*")
+
+	dat1 <- dat1 %>% select(matches(mname))
+	return(dat1)
+}
+
+if (length(insts) > length(pop_mods)) {
+	c.lapply(insts, fpred)
+} else {
+	lapply(insts, fpred)
+}
+
+
