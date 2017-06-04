@@ -38,10 +38,40 @@ merge_est <- function(inst) {
 		return(est)
 	})
 	cat(c("  rbinding\n"))
-	est.dat <-do.call(rbind, est.dat)
+	est.dat <- unlist(est.dat, recursive = F)
 	assign(oname, est.dat)
 	cat(c("  saving\n"))
 	save(list = oname, file = paste0(data_dir, inst, "_est.Rda"))
 	rm(list = c(oname, "est.dat"))
 }
 
+est_hess <- function(inst) {
+	oname <- paste0(inst, "_est")
+	cat(c("Building", inst,"\n"))
+	est.dat <- c.lapply(1:20, function(i) {
+		cat(c("  loading file", i, "\n"))
+		edir  <- paste0(raw_dir, "estimates/")
+		fname <- paste0(est_dir, inst, "-", i, ".Rda")
+		load(fname)
+		dat <- get(oname)
+		dat <- lapply(dat, function(sub) {
+			out1 <- lapply(sub, function(mod) {
+				if(!is.na(mod[1])) {
+					return(list(estimates = mod$estimates, hessian = mod$hessian))
+				} else {
+					return(NA)
+				}
+			})
+			names(out1) <- names(sub)
+			return(out1)
+		})
+		rm(list = oname)
+		return(dat)
+	})
+	cat(c("  unlisting\n"))
+	est.dat <- unlist(est.dat, recursive = F)
+	assign(oname, est.dat)
+	cat(c("  saving\n"))
+	save(list = oname, file = paste0(data_dir, inst, "_est_hess.Rda"))
+	rm(list = c(oname, "est.dat"))
+}

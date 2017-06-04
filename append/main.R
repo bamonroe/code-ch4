@@ -5,21 +5,27 @@ if (!exists("from_main")) {
 	setwd(here)
 }
 
-do_merge_inst <- F
-do_est2inst   <- F
-do_merge_est  <- T
+do_merge_inst <- T
+do_est2inst   <- T
+do_merge_est  <- F
+do_est_hess   <- T
 
 if (do_merge_inst) {
 	c.source("full.R")
-	c.lapply(insts, merge_inst)
+	lapply(insts, merge_inst)
 }
 
 if (do_est2inst) {
 	source("mergeest.R")
-	c.lapply(insts, est_2_inst)
+	lapply(insts, est_2_inst)
 }
 
 if (do_merge_est) {
 	source("mergeest.R")
 	lapply(insts, merge_est)
+}
+
+if (do_est_hess) {
+	source("mergeest.R")
+	lapply(insts, est_hess)
 }
