@@ -8,6 +8,9 @@ mkmini_1 <- function(inst, mods) {
 
 	dat <- get(inst)
 
+	# Throw an ID variable in there
+	dat$ID <- 1:nrow(dat)
+
 	# Reduce the dataset to only include models we care about, given by pop_mods, and sample as necessary
 	dat0 <- lapply(pop_mods, function(mod) {
 		dat %>%
@@ -34,7 +37,8 @@ mkmini_2 <- function(inst, mods, wel_var) {
 	dat <- get(inst)
 
 	dat <- dat %>%
-		select(starts_with("win"), default, starts_with("real"), ends_with(wel_var), r, mu, alpha, beta, model)
+		select(matches(paste0(win_vars, collapse = "|")), default, starts_with("real"), ends_with(wel_var), r, mu, alpha, beta, model)
+		#select(starts_with("win"), default, starts_with("real"), ends_with(wel_var), r, mu, alpha, beta, model)
 
 	assign(inst, dat)
 

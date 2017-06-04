@@ -1,4 +1,4 @@
-mkwin <- function(inst){
+mkwin <- function(inst) {
 	cat(paste("Winner:", inst, "\n"))
 
 	load_suffix <- "-bak.Rda"
@@ -46,4 +46,137 @@ mkwin <- function(inst){
 	cat(c("Winner - Save:", inst, "\n"))
 	save(list = inst, file = paste0(data_dir, inst, save_suffix))
 }
+
+win2 <- function(inst) {
+	cat(paste("Winner 2:", inst, "\n"))
+
+	load_suffix <- "_est_hess.Rda"
+
+	cat("  Loading", inst, "...\n")
+	load(paste0(data_dir, inst, load_suffix))
+
+	oname <- paste0(inst, "_est")
+
+	dat <- get(oname)
+
+	ss <- seq(from = 0.2, to = .7, by = 0.08)
+	lb <- 1 - ss
+	ub <- 1.3 + ss
+
+	#expnum <- 9
+	#lb <- c(lb, exp(hunif(expnum) * -1.2))
+	#ub <- c(ub, exp(hunif(expnum) * 1.2))
+	
+	cat("  Calculating", inst, "...\n")
+	tstat <- c.lapply(dat, test0, lb = lb, ub = ub)
+	tstat <- do.call(rbind, tstat)
+
+	tlen <- 1:nrow(tstat)
+
+	astat <- tstat[which(tlen %% 2 == 1), ]
+	bstat <- tstat[which(tlen %% 2 == 0), ]
+
+	stats <- cbind(astat, bstat) %>% as.data.frame
+
+	names(stats) <- c(paste0("PRE_astat_", round(lb, 2), "_", round(ub, 2)),
+	                  paste0("PRE_bstat_", round(lb, 2), "_", round(ub, 2)))
+
+	new_names <- paste0("PRE_dstat_", round(lb, 2), "_", round(ub, 2))
+
+	sname <- paste0(inst, "_stats")
+	assign(sname, stats)
+
+	rm(list = c(oname, "dat", "tstat", "astat", "bstat", "stats"))
+	gc()
+
+	save(list = c(sname, "new_names"), file = paste0(data_dir, inst, "_default_stats.Rda"))
+}
+
+win2_merge <- function(inst, stats) {
+
+	load_suffix <- "-bak.Rda"
+
+	cat("  Loading", inst, "\n")
+	load(paste0(data_dir, inst, load_suffix))
+	load(paste0(data_dir, inst, "_default_stats.Rda"))
+
+	sname <- paste0(inst, "_stats")
+	dat   <- get(inst)
+	stats <- get(sname)
+
+	colnum <- ncol(stats)
+
+	stats10  <- ifelse(stats > 0.10, T, F)
+	stats10a <- stats10[, 1:(colnum/2)]
+	stats10b <- stats10[, ((colnum/2)+1):colnum]
+	stats10  <- stats10a | stats10b
+	stats10  <- ifelse(stats10, "PRE", NA)
+
+	stats05  <- ifelse(stats > 0.05, T, F)
+	stats05a <- stats05[, 1:(colnum/2)]
+	stats05b <- stats05[, ((colnum/2)+1):colnum]
+	stats05  <- stats05a | stats05b
+	stats05  <- ifelse(stats05, "PRE", NA)
+
+	colnames(stats10) <- paste0(new_names, "_s10")
+	colnames(stats05) <- paste0(new_names, "_s05")
+
+	stats <- cbind(stats10, stats05)
+	sname <- colnames(stats)
+	save(sname, file = paste0(data_dir, "stat_names.Rda"))
+
+	stats <- stats[dat$ID, ]
+
+	statsEUT <- cbind(dat$EUT_pval, stats)
+
+	stats <- apply(statsEUT, 1, function(row) {
+		pval <- row[1]
+		tests <- row[2:length(row)]
+		out <- ifelse(is.na(tests) & (!is.na(pval)), "EUT", tests)
+		ifelse(is.na(out), "NA", out)
+	}) %>% t()
+
+	dat <- cbind(dat, stats)
+
+	assign(inst, dat)
+	save(list = inst, file = paste0(data_dir, inst, load_suffix))
+}
+
+
+testit <- function(bvec2, bvec3, lb, ub) {
+
+	blen <- length(bvec2)
+	llen <- length(lb)
+
+	lbt <- matrix(lb, nrow = blen, ncol = llen, byrow = T)
+	ubt <- matrix(ub, nrow = blen, ncol = llen, byrow = T)
+
+	at <- bvec2 < lbt | ubt < bvec2
+	at <- colMeans(at)
+
+	bt <- bvec3 < lbt | ubt < bvec3
+	bt <- colMeans(bt)
+
+	return(rbind(at,bt))
+
+}
+
+test0 <- function(sub, N = 1000, lb = 0.7, ub = 2.45) {
+	PRE <- sub$PRE
+	if (is.na(PRE[1])) return(matrix(NA, nrow = 2, ncol = length(lb)))
+	
+	est <- PRE$estimates
+	hes <- PRE$hessian
+	cov <- solve(-hes)
+
+	boot <- mvhnorm(N, est, cov)
+
+	lb <- log(lb)
+	ub <- log(ub)
+
+	test <- testit(boot[,2], boot[,3], lb = lb, ub = ub)
+
+	return(test)
+}
+
 
