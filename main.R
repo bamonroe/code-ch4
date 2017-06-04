@@ -2,10 +2,10 @@ source("setup.R")
 from_main <- T
 
 # What stuff are we doing?
-do_real_HNG <- T
+do_real_HNG <- F
 
-do_append <- T
-do_clean  <- T
+do_append <- F
+do_clean  <- F
 do_fit    <- T
 do_plot   <- T
 
@@ -29,6 +29,9 @@ if (do_clean) {
 	source("main.R")
 	setwd("../")
 }
+
+#load(paste0(data_dir, "stat_names.Rda"))
+#win_vars <- c(win_vars, sname)
 
 if (do_fit) {
 	setwd("fitline")

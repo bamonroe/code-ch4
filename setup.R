@@ -2,8 +2,9 @@ library(ctools)
 c.library("dplyr", "MSL", "mgcv", "halton", "ggplot2", "cowplot", "haven", "welfare")
 
 insts   <- c("HNG_1", "HNG", "HO", "LMS20", "LMS30", "SH")
-insts   <- c("HNG_1")
 insts   <- c("HNG_1", "HNG")
+insts   <- c("HNG")
+insts   <- c("HNG_1")
 
 wel_vars <- c("WelSurplus", "WelMax", "WelEfficiency", "CEdiff", "Prob")
 wel_var  <- wel_vars[1]
@@ -14,7 +15,7 @@ est_dir      <- paste0(getwd(), "/data/raw/est_merged/")
 merged_dir   <- paste0(getwd(), "/data/raw/merged/")
 data_dir     <- paste0(getwd(), "/data/full/")
 fit_dir      <- paste0(getwd(), "/data/lo_fits/")
-plot_dir     <- paste0(getwd(), "/plots/")
+plot_dir     <- paste0(getwd(), "/figures/")
 
 hng_plot_dir <- paste0(plot_dir, "real/")
 hng_data_dir <- paste0(getwd(), "/data/HNG/data/")
@@ -39,6 +40,12 @@ defaults <- mods
 
 # Which vars are we going to make predictions/plots for
 win_vars <- c("win_05", "default")
+
+#sname_file <- paste0(data_dir, "stat_names.Rda")
+#if (file.exists(sname_file)) {
+#	load(sname_file)
+#	win_vars <- c(sname, win_vars)
+#}
 
 # Fraction of the dataset to use, there's 250k oberservations per model
 mini_frac <- 1
