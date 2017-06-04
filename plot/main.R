@@ -20,7 +20,7 @@ do_exwel_ind <- T
 
 do_exwel_diff_ind <- F
 
-do_all_insts <- F
+do_all_insts <- T
 
 theme_set(theme_grey())
 
@@ -31,7 +31,7 @@ if (do_win_all | do_win_ind | do_wel_all | do_wel_ind | do_exwel_ind | do_exwel_
 }
 
 if (do_all_insts) {
-	all_inst(insts)
+	all_exwel(insts)
 }
 
 print(warnings())

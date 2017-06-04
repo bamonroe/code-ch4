@@ -8,16 +8,13 @@ label_fun <- function(mnames) {
 }
 
 wv_label_fun <- function(mnames) {
-
 	nnames <- list(win_05 = "Win at 5%", default = "Default")
-
 	for (win_var in win_vars) {
 		mnames <- ifelse(mnames == win_var, nnames[[win_var]], mnames)
 		for (inst in insts) {
 			mnames <- ifelse(mnames == paste0(inst, "_", win_var), paste(inst, nnames[[win_var]], collapse = " "), mnames)
 		}
 	}
-
 }
 
 par_model <- function(mnames) {
@@ -76,9 +73,9 @@ plot_win <- function(dat, par, models, win_var) {
 
 	dat1 <- lapply(mods, function(mod) {
 		dat0       <- dat
-		dat0$point <- ifelse(dat0[[win_var]] == mod, dat0[[paste0(win_var, "_", mod, "_prob")]],     dat0$point)
-		dat0$U95   <- ifelse(dat0[[win_var]] == mod, dat0[[paste0(win_var, "_", mod, "_prob_U95")]], dat0$U95)
-		dat0$L95   <- ifelse(dat0[[win_var]] == mod, dat0[[paste0(win_var, "_", mod, "_prob_L95")]], dat0$L95)
+		dat0$point <- dat0[[paste0(win_var, "_", mod, "_prob")]]
+		dat0$U95   <- dat0[[paste0(win_var, "_", mod, "_prob_U95")]]
+		dat0$L95   <- dat0[[paste0(win_var, "_", mod, "_prob_L95")]]
 		dat0$win   <- which(mods == mod)
 		dat0$conv  <- 1
 		return(dat0)
@@ -87,9 +84,9 @@ plot_win <- function(dat, par, models, win_var) {
 	mmods <- c(mods, "NA")
 	dat2 <- lapply(mmods, function(mod) {
 		dat0       <- dat
-		dat0$point <- ifelse(dat0[[win_var]] == mod, dat0[[paste0(win_var, "_", mod, "_prob_na")]],     dat0$point)
-		dat0$U95   <- ifelse(dat0[[win_var]] == mod, dat0[[paste0(win_var, "_", mod, "_prob_na_U95")]], dat0$U95)
-		dat0$L95   <- ifelse(dat0[[win_var]] == mod, dat0[[paste0(win_var, "_", mod, "_prob_na_L95")]], dat0$L95)
+		dat0$point <- dat0[[paste0(win_var, "_", mod, "_prob_na")]]
+		dat0$U95   <- dat0[[paste0(win_var, "_", mod, "_prob_na_U95")]]
+		dat0$L95   <- dat0[[paste0(win_var, "_", mod, "_prob_na_L95")]]
 		dat0$win   <- which(mmods == mod)
 		dat0$conv  <- 2
 		return(dat0)
@@ -121,9 +118,9 @@ plot_win <- function(dat, par, models, win_var) {
 	rm(dat0)
 
 	# Factor things
-	dat$conv  <- factor(dat$conv,  levels = 1:2,                labels = c("Converged Only", "All Data"))
-	dat$win   <- factor(dat$win,   levels = 1:length(mmods),    labels = label_fun(mmods))
-	dat$model <- factor(dat$model, levels = 1:length(pop_mods), labels = label_fun(pop_mods))
+	dat$conv    <- factor(dat$conv,    levels = 1:2,                labels = c("Converged Only", "All Data"))
+	dat$win     <- factor(dat$win,     levels = 1:length(mmods),    labels = label_fun(mmods))
+	dat$model   <- factor(dat$model,   levels = 1:length(pop_mods), labels = label_fun(pop_mods))
 	dat$par_grp <- factor(dat$par_grp, levels = 1:length(par),  labels = par)
 
 	dat <- dat %>%
@@ -132,13 +129,10 @@ plot_win <- function(dat, par, models, win_var) {
 
 	#dat %>% summary %>% print
 
-	cat(c(rep(" ", 4), "Now plotting with", nrow(dat), "rows", "\n"))
+	cat(c(rep(" ", 6), "Now plotting with", nrow(dat), "rows", "\n"))
 
 	p <- ggplot(dat, aes_string(x = "par", y = "point", color = "win", linetype = "win"))
 	p <- p + scale_y_continuous(limits = c(0,1))
-	p <- p + geom_smooth(span = 0.15, se = F)
-	p <- p + geom_smooth(span = 0.15, aes(y = U95), linetype = 5, se = F)
-	p <- p + geom_smooth(span = 0.15, aes(y = L95), linetype = 5, se = F)
 
 	if (do_by == "model") {
 		p    <- p + facet_grid(conv~model)
@@ -148,6 +142,11 @@ plot_win <- function(dat, par, models, win_var) {
 		p    <- p + facet_grid(conv~par_grp, scales = "free_x")
 		xlab <- "Parameter Value"
 	}
+
+	#p <- p + geom_point()
+	p <- p + geom_smooth(span = 0.15, se = F)
+	p <- p + geom_smooth(span = 0.15, aes(y = U95), linetype = 5, se = F)
+	p <- p + geom_smooth(span = 0.15, aes(y = L95), linetype = 5, se = F)
 
 	p <- p + labs(title = title, x = xlab, y = "Frequency of Winning")
 	p <- p + theme(plot.title = element_text(hjust = 0.5), legend.position = "bottom")
@@ -186,9 +185,9 @@ plot_wel <- function(dat, par, models, wel_var, win_var, ylim = c(-45, 5)) {
 	dat1 <- lapply(mmods, function(mod) {
 		dat0       <- dat
 		if (mod != "Expected") {
-			dat0$point <- ifelse(dat0[[win_var]] == mod, dat0[[paste0(win_var, "_", mod, "_wel")]],     dat0$point)
-			dat0$U95   <- ifelse(dat0[[win_var]] == mod, dat0[[paste0(win_var, "_", mod, "_wel_U95")]], dat0$U95)
-			dat0$L95   <- ifelse(dat0[[win_var]] == mod, dat0[[paste0(win_var, "_", mod, "_wel_L95")]], dat0$L95)
+			dat0$point <- dat0[[paste0(win_var, "_", mod, "_wel")]]
+			dat0$U95   <- dat0[[paste0(win_var, "_", mod, "_wel_U95")]]
+			dat0$L95   <- dat0[[paste0(win_var, "_", mod, "_wel_L95")]]
 			dat0$win   <- which(mmods == mod)
 		} else {
 			dat0$point <- dat0[[paste0(win_var, "_ewel_point")]]
@@ -431,7 +430,6 @@ plot_exwel_diff <- function(dat, par, models, wel_var, class_var1 = win_vars[1],
 }
 
 welfare5 <- function(dat, mod, par, wel_var, win_var, legpos = "none", yaxis = F) {
-
 	#dbug <- 1
 	#print(paste("here:", dbug)) ; dbug <- dbug + 1
 
@@ -625,6 +623,8 @@ if (do_exwel_diff_ind) {
 
 	rm(list = c("p", "RDAT"))
 }
+
+print(warnings())
 
 }
 
