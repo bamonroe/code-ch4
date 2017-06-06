@@ -34,6 +34,7 @@ mk_pop <- function(mod, HH, props) {
 	}
 
 	r_mean <- get("r_mean", envir = .GlobalEnv)
+	r_mean <- get("r_mean", envir = .GlobalEnv)
 	r_sd   <- get("r_sd", envir = .GlobalEnv)
 
 	mu_mean0 <- get("mu_mean0", envir = .GlobalEnv)
@@ -128,33 +129,58 @@ who_won <- function(lo_obj, HH, props) {
 		pdat <- pop
 		wdat <- pop
 
-		pdat[[paste0(mname,"_EUT")]] <- predict(lo_obj[[mname]][["EUT"]][["prob"]], pop)
-		pdat[[paste0(mname,"_POW")]] <- predict(lo_obj[[mname]][["POW"]][["prob"]], pop)
-		pdat[[paste0(mname,"_INV")]] <- predict(lo_obj[[mname]][["INV"]][["prob"]], pop)
-		pdat[[paste0(mname,"_PRE")]] <- predict(lo_obj[[mname]][["PRE"]][["prob"]], pop)
+		pdat <- lapply(mods, function(mod) {
+			fit <- predict(lo_obj[[mname]][[mod]][["prob"]], pop)
+			fit$fit
+		})
+		pdat <- do.call(cbind, pdat)
+		colnames(pdat) <- paste0(mname, "_", mods)
+		pdat <- cbind(pop, pdat)
 
-		wdat[[paste0(mname,"_EUT_wel")]] <- predict(lo_obj[[mname]][["EUT"]][["wel"]], pop)
-		wdat[[paste0(mname,"_POW_wel")]] <- predict(lo_obj[[mname]][["POW"]][["wel"]], pop)
-		wdat[[paste0(mname,"_INV_wel")]] <- predict(lo_obj[[mname]][["INV"]][["wel"]], pop)
-		wdat[[paste0(mname,"_PRE_wel")]] <- predict(lo_obj[[mname]][["PRE"]][["wel"]], pop)
+		wdat <- lapply(mods, function(mod) {
+			fit <- predict(lo_obj[[mname]][[mod]][["prob"]], pop)
+			fit$fit
+		})
+		wdat <- do.call(cbind, wdat)
+		colnames(pdat) <- paste0(mname, "_", mods, "_wel")
+		wdat <- cbind(pop, wdat)
+
+#		pdat[[paste0(mname,"_EUT")]] <- predict(lo_obj[[mname]][["EUT"]][["prob"]], pop)
+#		pdat[[paste0(mname,"_POW")]] <- predict(lo_obj[[mname]][["POW"]][["prob"]], pop)
+#		pdat[[paste0(mname,"_INV")]] <- predict(lo_obj[[mname]][["INV"]][["prob"]], pop)
+#		pdat[[paste0(mname,"_PRE")]] <- predict(lo_obj[[mname]][["PRE"]][["prob"]], pop)
+#
+#		wdat[[paste0(mname,"_EUT_wel")]] <- predict(lo_obj[[mname]][["EUT"]][["wel"]], pop)
+#		wdat[[paste0(mname,"_POW_wel")]] <- predict(lo_obj[[mname]][["POW"]][["wel"]], pop)
+#		wdat[[paste0(mname,"_INV_wel")]] <- predict(lo_obj[[mname]][["INV"]][["wel"]], pop)
+#		wdat[[paste0(mname,"_PRE_wel")]] <- predict(lo_obj[[mname]][["PRE"]][["wel"]], pop)
 
 		list(prob = pdat, wel = wdat)
 	}, HH = HH, props = props)
 
 	pred_sums <- lapply(predictions, function(dat) {
-		eut <- dat$prob %>% select(ends_with("EUT")) %>% sum(na.rm = T)
-		pow <- dat$prob %>% select(ends_with("POW")) %>% sum(na.rm = T)
-		inv <- dat$prob %>% select(ends_with("INV")) %>% sum(na.rm = T)
-		pre <- dat$prob %>% select(ends_with("PRE")) %>% sum(na.rm = T)
-		data.frame(EUT = eut, POW = pow, INV = inv, PRE = pre)
+		out <- lapply(mods, function(mod) {
+			dat$prob %>% select(ends_with(mod)) %>% sum(na.rm = T)
+		})
+		do.call(cbind, out) %>% as.data.frame %>% colnames(mods)
+
+		#eut <- dat$prob %>% select(ends_with("EUT")) %>% sum(na.rm = T)
+		#pow <- dat$prob %>% select(ends_with("POW")) %>% sum(na.rm = T)
+		#inv <- dat$prob %>% select(ends_with("INV")) %>% sum(na.rm = T)
+		#pre <- dat$prob %>% select(ends_with("PRE")) %>% sum(na.rm = T)
+		#data.frame(EUT = eut, POW = pow, INV = inv, PRE = pre)
 	}) 
 
 	wel_sums <- lapply(predictions, function(dat) {
-		eut <- dat$wel %>% select(ends_with("EUT_wel")) %>% sum(na.rm = T)
-		pow <- dat$wel %>% select(ends_with("POW_wel")) %>% sum(na.rm = T)
-		inv <- dat$wel %>% select(ends_with("INV_wel")) %>% sum(na.rm = T)
-		pre <- dat$wel %>% select(ends_with("PRE_wel")) %>% sum(na.rm = T)
-		data.frame(EUT = eut, POW = pow, INV = inv, PRE = pre)
+		out <- lapply(mods, function(mod) {
+			dat$wel %>% select(ends_with(mod)) %>% sum(na.rm = T)
+		})
+		do.call(cbind, out) %>% as.data.frame %>% colnames(mods)
+		#eut <- dat$wel %>% select(ends_with("EUT_wel")) %>% sum(na.rm = T)
+		#pow <- dat$wel %>% select(ends_with("POW_wel")) %>% sum(na.rm = T)
+		#inv <- dat$wel %>% select(ends_with("INV_wel")) %>% sum(na.rm = T)
+		#pre <- dat$wel %>% select(ends_with("PRE_wel")) %>% sum(na.rm = T)
+		#data.frame(EUT = eut, POW = pow, INV = inv, PRE = pre)
 	}) 
 
 	pred_mat <- do.call(rbind, pred_sums)

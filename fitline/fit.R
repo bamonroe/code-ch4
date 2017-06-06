@@ -34,8 +34,7 @@ fit_gam <- function(win_mod, dat, mod, wel_var, class_var) {
 	# NA models don't have estimates to make welfare predictions
 	if (win_mod == "NA") return(list(prob = pfit, wel = NULL))
 
-	dat <- dat %>%
-		filter(win == 1)
+	dat <- dat %>% filter(win == 1)
 
 	dat$wel <- dat[[paste0(win_mod, "_", wel_var)]] - dat[[paste0("real_", wel_var)]]
 
@@ -58,26 +57,6 @@ fit_gam <- function(win_mod, dat, mod, wel_var, class_var) {
 	}
 
 	return(list(prob = pfit, wel = wfit))
-}
-
-fitter <- function(inst) {
-	#dbug <- 1
-	#print(paste("here", dbug)) ; dbug <- dbug + 1
-	load_suffix <- "-bak.Rda"
-	load(paste0(data_dir, inst, load_suffix))
-
-	cat(c("\n", "Fitting for", inst),"\n")
-
-	# Load the instrument into a known var
-	dat <- get(inst)
-
-	if (length(insts) > length(win_vars)) {
-		null <- lapply(win_vars, fit_per_class, dat, inst)
-	} else {
-		null <- lapply(win_vars, fit_per_class, dat, inst)
-	}
-	cat("\n")
-
 }
 
 fit_per_class <- function(class_var, dat, inst) {
@@ -120,8 +99,28 @@ fit_per_class <- function(class_var, dat, inst) {
 
 }
 
+fitter <- function(inst) {
+	#dbug <- 1
+	#print(paste("here", dbug)) ; dbug <- dbug + 1
+	load_suffix <- "-bak.Rda"
+	load(paste0(data_dir, inst, load_suffix))
+
+	cat(c("\n", "Fitting for", inst),"\n")
+
+	# Load the instrument into a known var
+	dat <- get(inst)
+
+	if (length(insts) > length(win_vars)) {
+		null <- lapply(win_vars, fit_per_class, dat, inst)
+	} else {
+		null <- c.lapply(win_vars, fit_per_class, dat, inst)
+	}
+	cat("\n")
+
+}
+
 if (length(insts) > length(win_vars)) {
-	lapply(insts, fitter)
+	c.lapply(insts, fitter)
 } else {
 	lapply(insts, fitter)
 }
