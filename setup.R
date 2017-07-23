@@ -2,9 +2,12 @@ library(ctools)
 c.library("dplyr", "MSL", "mgcv", "halton", "ggplot2", "cowplot", "haven", "welfare")
 
 insts   <- c("HNG_1", "HNG", "HO", "LMS20", "LMS30", "SH")
-insts   <- c("HNG_1", "HNG")
 insts   <- c("HNG")
+insts   <- c("HNG_3")
 insts   <- c("HNG_1")
+insts   <- c("HNG_3", "HNG_5", "HNG_7", "HNG_9", "HNG_11")
+insts   <- c("HNG_1", "HNG")
+insts   <- c("HNG_1", "HNG_3", "HNG_5", "HNG_7", "HNG_9", "HNG_11", "HNG")
 
 wel_vars <- c("WelSurplus", "WelMax", "WelEfficiency", "CEdiff", "Prob")
 wel_var  <- wel_vars[1]
@@ -16,6 +19,7 @@ merged_dir   <- paste0(getwd(), "/data/raw/merged/")
 data_dir     <- paste0(getwd(), "/data/full/")
 fit_dir      <- paste0(getwd(), "/data/lo_fits/")
 plot_dir     <- paste0(getwd(), "/figures/")
+table_dir    <- paste0(getwd(), "/tables/")
 
 hng_plot_dir <- paste0(plot_dir, "real/")
 hng_data_dir <- paste0(getwd(), "/data/HNG/data/")
@@ -27,8 +31,8 @@ for (dir in c(data_dir, fit_dir, plot_dir, hng_res_dir, hng_plot_dir)) {
 }
 
 # Which models are we considering estimates for?
-mods     <- c("EUT", "INV", "POW", "PRE")
 mods     <- c("EUT", "POW", "PRE")
+mods     <- c("EUT", "INV", "POW", "PRE")
 mods     <- c("EUT", "PRE")
 # Which models are we considering subjects for?
 pop_mods <- c("EUT", "PRE")
@@ -46,6 +50,12 @@ win_vars <- c("win_05", "default")
 #	load(sname_file)
 #	win_vars <- c(sname, win_vars)
 #}
+
+# Just get the length
+len_insts    <- length(insts)
+len_mods     <- length(mods)
+len_pop_mods <- length(pop_mods)
+len_win_vars <- length(win_vars)
 
 # Fraction of the dataset to use, there's 250k oberservations per model
 mini_frac <- 1

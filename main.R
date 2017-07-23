@@ -7,7 +7,7 @@ do_real_HNG <- F
 do_append <- F
 do_clean  <- F
 do_fit    <- T
-do_plot   <- T
+do_plot   <- F
 
 if (do_real_HNG) {
 	setwd("HNG")
