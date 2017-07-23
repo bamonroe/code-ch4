@@ -13,6 +13,7 @@ perSub <- function(s, sub.est, weldat) {
 		})
 	})
 
+
 	# The real parameters and pfunc
 	r.par <- c(r = wdat$r[1], alpha = wdat$alpha[1], beta = wdat$beta[1], mu =wdat$mu[1])
 	r.par <- r.par[which(!is.na(r.par))]
@@ -50,13 +51,13 @@ perFindex <- function(fname) {
 	suffix <- sub(".*-", "", fname)
 	insts  <- paste0("HNG_", multiples)
 
-	## Have we done all the things for this file? Then skip this iteration
-	#skipit <- lapply(insts, function(inst) {
-	#	save_file <- paste0(new_merged_dir, "/", inst, "-", suffix)
-	#	file.exists(save_file)
-	#})
-	#skipit <- do.call(c, skipit)
-	#if (all(skipit)) return()
+	# Have we done all the things for this file? Then skip this iteration
+	skipit <- lapply(insts, function(inst) {
+		save_file <- paste0(new_merged_dir, "/", inst, "-", suffix)
+		file.exists(save_file)
+	})
+	skipit <- do.call(c, skipit)
+	if (all(skipit)) return()
 
 	# Load the raw estimates and the insurance task choices for the same subjects
 	load(fname)
@@ -86,8 +87,11 @@ perFindex <- function(fname) {
 	})
 }
 
-# List the files for raw estimates and insurance task choices
-efiles <- list.files(new_est_dir,    pattern = ".*\\.Rda", full.names = T)
-
-cat("Estimates File:\n")
-lapply(efiles, perFindex)
+rr <- c(1:9, 15)
+for (i in rr) {
+	# List the files for raw estimates and insurance task choices
+	fpat <- paste0("sub_est_new-", i, "\\.")
+	files <- list.files(path = new_est_dir, pattern = fpat, full.names = T)
+	cat("Estimates File:\n")
+	lapply(files, perFindex)
+}

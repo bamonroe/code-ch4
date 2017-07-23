@@ -23,7 +23,7 @@ perFile <- function(fname) {
 	save_file <- paste0(new_est_dir, "/sub_est_new-", suffix)
 	if (file.exists(save_file)) return()
 	e <- tryCatch(load(fname), error = function(e) {NA})
-	if (is.na(e)) return()
+	if (is.na(e)) {cat("couldn't load") ; return()}
 
 	load(fname)
 	sub.est <- c.lapplyLB(persub, getEst)
@@ -42,13 +42,10 @@ perFile <- function(fname) {
 	save(real, sub.est, file = save_file)
 }
 
-rr <- c(10, 2:6)
-
+rr <- c(1:20)
 for (i in rr) {
 	fpat <- paste0("HNG-subdat-", i)
 	files <- list.files(path = new_rawdat_dir, pattern = fpat, full.names = T)
 	null <- lapply(files, perFile)
-
 	print(warnings())
 }
-

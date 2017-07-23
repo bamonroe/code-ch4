@@ -1,6 +1,3 @@
-
-new_rawdat_dir  <- paste0(raw_dir, "new_rawdat")
-
 keep_HNG <- function(fname) {
 	cat("  Dropping for", fname, "\n")
 
@@ -22,6 +19,7 @@ keep_HNG <- function(fname) {
 	persub <- persub[tokeep]
 
 	persub <- lapply(persub, function(sub) {
+		sub$Inst <- ifelse(sub$Inst == "HNG.lot", "HNG", sub$Inst)
 		sub %>%
 		filter(Inst == "HNG" | Inst == "HNG.ins")
 	})
@@ -30,10 +28,15 @@ keep_HNG <- function(fname) {
 }
 
 old_raw_dat <- paste0(raw_dir, "rawdat")
-subfiles <- list.files(path = old_raw_dat, pattern = "^subdat", full.names = T)
+new_raw_dat <- paste0(raw_dir, "new_rawraw")
+subfiles0 <- list.files(path = old_raw_dat, pattern = "^subdat", full.names = T)
+subfiles1 <- list.files(path = new_raw_dat, pattern = "^subdat", full.names = T)
+
+subfiles <- c(subfiles0, subfiles1)
+subfiles <- subfiles1
 
 cat("Dropping non HNG data\n")
-lapply(subfiles, keep_HNG)
+c.lapply(subfiles, keep_HNG)
 
 print(warnings())
 

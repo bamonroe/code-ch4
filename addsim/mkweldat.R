@@ -1,6 +1,3 @@
-
-rfiles <- list.files(new_rawdat_dir, pattern = ".*\\.Rda", full.names = T)
-
 perFile <- function(fname) {
 	suffix    <- sub(".*-", "", fname)
 	save_file <- paste0(new_weldat_dir, "/weldat-", suffix)
@@ -11,4 +8,5 @@ perFile <- function(fname) {
 	save(weldat, file = save_file)
 }
 
+rfiles <- list.files(new_rawdat_dir, pattern = ".*\\.Rda", full.names = T)
 c.lapply(rfiles, perFile)

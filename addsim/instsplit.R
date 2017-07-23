@@ -5,8 +5,7 @@ perInst <- function(inst, sub.est, real, suffix) {
 			sub[[inst]]
 		})
 		dat <- ML.dataframe(dat)
-		dat <- cbind(inst, real)
-		dat$ID <- (1:nrow(dat)) + round(runif(nrow(dat)) * 1000000)
+		dat <- cbind(dat, real)
 		assign(inst, dat)
 		save(list = inst, file = save_file)
 		return(dat)
@@ -24,6 +23,8 @@ perFile <- function(fname) {
 	skipit <- do.call(c, skipit)
 	if (all(skipit)) return()
 
+	cat("Instsplit for", fname, "\n")
+
 	load(fname)
 	out <- lapply(insts, perInst, sub.est = sub.est, real = real, suffix = suffix)
 
@@ -31,6 +32,13 @@ perFile <- function(fname) {
 	return(out)
 }
 
-efiles <- list.files(new_est_dir, full.names = T)
-null <- lapply(efiles, perFile)
 
+rr <- c(1:20)
+for (i in rr) {
+	fpat <- paste0("sub_est_new-1.")
+
+	files <- list.files(path = new_est_dir, pattern = fpat, full.names = T)
+	null <- c.lapply(files, perFile)
+
+	print(warnings())
+}

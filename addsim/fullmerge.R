@@ -4,7 +4,8 @@ mergeres <- function(iname) {
 
 	resdat <- lapply(fnames, function(fname, iname) {
 		load(fname)
-		get(iname)
+		dat <- get(iname)
+		return(dat)
 	}, iname = iname)
 
 	assign(iname, do.call(rbind, resdat))
@@ -16,4 +17,4 @@ mergeres <- function(iname) {
 }
 
 insts <- paste0("HNG_", multiples)
-out <- lapply(insts, mergeres)
+out <- c.lapply(insts, mergeres)

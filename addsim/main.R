@@ -14,17 +14,26 @@ new_weldat_dir <- paste0(raw_dir, "new_weldat")
 new_merged_dir <- paste0(raw_dir, "new_merged")
 new_full_dir   <- paste0(raw_dir, "new_full")
 
+for (dir in c(new_rawdat_dir, new_est_dir, new_df_dir, new_weldat_dir, new_merged_dir, new_full_dir)) {
+	if (! dir.exists(dir)) dir.create(dir)
+}
+
 c.export(ls())
 
 # These two only ever need to be done once
-do_keepHNG   <- F
-do_mkweldat  <- F
-# Estimation take a really, really long time.
-do_estimate  <- F
+do_popgen    <- F # Generate the choice data
+do_keepHNG   <- F # drop everything that isn't HNG
+do_mkweldat  <- F # Separate out the insurance task data
+# Estimation takes a really, really long time.
+do_estimate  <- F # estimate on the HNG datasets
 # From below are the only ones needed post estimation
-do_instsplit <- F
-do_welcalc   <- F
-do_fullmerge <- T
+do_instsplit <- F # Split the files out per Instrument and pick the winners for HNG
+do_welcalc   <- F # Calculate welfare
+do_fullmerge <- T # merge everything into one file per instrument
+
+if (do_popgen) {
+	source("popgen.R")
+}
 
 if (do_keepHNG) {
 	source("keepHNG.R")
@@ -48,3 +57,7 @@ if (do_fullmerge) {
 	source("fullmerge.R")
 }
 
+here <- getwd()
+setwd("../")
+source("setup.R")
+setwd(here)
