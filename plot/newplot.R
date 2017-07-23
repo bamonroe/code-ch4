@@ -6,7 +6,7 @@ label_fun <- function(mnames) {
 						ifelse(mnames == "NA", "NA", 
 							ifelse(mnames == "Expected", "Expected", mnames))))))
 }
-
+ 
 wv_label_fun <- function(mnames) {
 	nnames <- list(win_05 = "Win at 5%", default = "Default")
 	for (win_var in win_vars) {
@@ -30,16 +30,57 @@ par_model <- function(mnames) {
 	return(out)
 }
 
-ylim_model <- function(mnames) {
-	if (mnames == "EUT") {
-		out <- c(-10, 0)
-	} else if (mnames == "POW") {
-		out <- c(-20, 0)
-	} else if (mnames == "INV") {
-		out <- c(-20, 0)
-	} else if (mnames == "PRE") {
-		out <- c(-25, 0)
+inst_labels <- function(inst) {
+	ifelse(inst == "HNG_1", "1",
+		ifelse(inst == "HNG_3", "3",
+			ifelse(inst == "HNG_5", "5",
+				ifelse(inst == "HNG_7", "7",
+					ifelse(inst == "HNG_9", "9",
+						ifelse(inst == "HNG_11", "11",
+							ifelse(inst == "HNG", "13", inst)))))))
+}
+
+par_labels <- function(pars) {
+	ifelse(pars == "mu", "lambda", pars)
+}
+
+ylim_model <- function(mnames, inst = "HNG_1") {
+
+	i1 <- length(inst) == 1
+	i2 <- length(inst) == 2
+
+	if ((i1) & (inst[1] == "HNG")) {
+		if (mnames[1] == "EUT") {
+			out <- c(-10, 0)
+		} else if (mnames[1] == "POW") {
+			out <- c(-20, 0)
+		} else if (mnames[1] == "INV") {
+			out <- c(-20, 0)
+		} else if (mnames[1] == "PRE") {
+			out <- c(-20, 8)
+		}
+	} else if ((i1) & (inst[1] == "HNG_1")) {
+		if (mnames[1] == "EUT") {
+			out <- c(-10, 0)
+		} else if (mnames[1] == "POW") {
+			out <- c(-20, 0)
+		} else if (mnames[1] == "INV") {
+			out <- c(-20, 0)
+		} else if (mnames[1] == "PRE") {
+			out <- c(-25, 0)
+		}
+	} else {
+		if (mnames[1] == "EUT") {
+			out <- c(-10, 0)
+		} else if (mnames[1] == "POW") {
+			out <- c(-20, 0)
+		} else if (mnames[1] == "INV") {
+			out <- c(-20, 0)
+		} else if (mnames[1] == "PRE") {
+			out <- c(-25, 0)
+		}
 	}
+
 	return(out)
 }
 
@@ -78,6 +119,8 @@ plot_win <- function(dat, par, models, win_var) {
 		dat0$L95   <- dat0[[paste0(win_var, "_", mod, "_prob_L95")]]
 		dat0$win   <- which(mods == mod)
 		dat0$conv  <- 1
+		#colnames(dat0) %>% length %>% print
+		#colnames(dat0) %>% print
 		return(dat0)
 	})
 
@@ -118,10 +161,12 @@ plot_win <- function(dat, par, models, win_var) {
 	rm(dat0)
 
 	# Factor things
+	par <- par_labels(par)
+
 	dat$conv    <- factor(dat$conv,    levels = 1:2,                labels = c("Converged Only", "All Data"))
 	dat$win     <- factor(dat$win,     levels = 1:length(mmods),    labels = label_fun(mmods))
 	dat$model   <- factor(dat$model,   levels = 1:length(pop_mods), labels = label_fun(pop_mods))
-	dat$par_grp <- factor(dat$par_grp, levels = 1:length(par),  labels = par)
+	dat$par_grp <- factor(dat$par_grp, levels = 1:length(par),      labels = par)
 
 	dat <- dat %>%
 		select_("par", "par_grp", "model", "point", "U95", "L95", "win", "conv") %>%
@@ -148,7 +193,8 @@ plot_win <- function(dat, par, models, win_var) {
 	p <- p + geom_smooth(span = 0.15, aes(y = U95), linetype = 5, se = F)
 	p <- p + geom_smooth(span = 0.15, aes(y = L95), linetype = 5, se = F)
 
-	p <- p + labs(title = title, x = xlab, y = "Frequency of Winning")
+	p <- p + labs(title = title, x = xlab, y = "Frequency of Winning", color = "Winning Model")
+	p <- p + scale_linetype(guide = "none")
 	p <- p + theme(plot.title = element_text(hjust = 0.5), legend.position = "bottom")
 
 	return(p)
@@ -217,6 +263,8 @@ plot_wel <- function(dat, par, models, wel_var, win_var, ylim = c(-45, 5)) {
 	}
 	rm(dat0)
 
+	par <- par_labels(par)
+
 	dat$win     <- factor(dat$win,     levels = 1:length(mmods),    labels = label_fun(mmods))
 	dat$model   <- factor(dat$model,   levels = 1:length(pop_mods), labels = label_fun(pop_mods))
 	dat$par_grp <- factor(dat$par_grp, levels = 1:length(par),      labels = par)
@@ -228,22 +276,23 @@ plot_wel <- function(dat, par, models, wel_var, win_var, ylim = c(-45, 5)) {
 	cat(c(rep(" ", 4), "Now plotting welfare with", nrow(dat), "rows", "\n"))
 
 	p <- ggplot(dat, aes_string(x = "par", y = "point", color = "win", linetype = "win"))
-	p <- p + facet_grid(~model)
+	p <- p + facet_wrap(~model, ncol = 2)
 	p <- p + geom_smooth(span = 0.15, se = F)
 	p <- p + geom_smooth(span = 0.15, aes(y = U95), linetype = 5, se = F)
 	p <- p + geom_smooth(span = 0.15, aes(y = L95), linetype = 5, se = F)
 
 	if (do_by == "model") {
-		p    <- p + facet_grid(~model)
+		p    <- p + facet_wrap(~model, ncol = 2)
 		xlab <- paste(par, "Value")
 	}
 	else if (do_by == "par") {
-		p    <- p + facet_grid(~par_grp, scales = "free_x")
+		p    <- p + facet_wrap(~par_grp, ncol = 2, scales = "free_x")
 		xlab <- "Parameter Value"
 	}
 
 	p <- p + coord_cartesian(ylim = ylim)
 	p <- p + labs(title = title, x = xlab, y = paste("Value of Estimated", wel_var, "- Real", wel_var), color = "Classified Model")
+	p <- p + scale_linetype(guide = "none")
 	p <- p + theme(plot.title = element_text(hjust = 0.5), legend.position = "bottom")
 	
 	return(p)
@@ -308,6 +357,8 @@ plot_exwel <- function(dat, par, models, wel_var, class_vars = win_vars, ylim = 
 #	wv_label_fun(class_vars) %>% print
 #	cat("\n\n\n")
 
+	par <- par_labels(par)
+
 	dat$win     <- factor(dat$win,     levels = 1:length(class_vars), labels = class_vars)
 	dat$model   <- factor(dat$model,   levels = 1:length(mods), labels = label_fun(mods))
 	dat$par_grp <- factor(dat$par_grp, levels = 1:length(par),  labels = par)
@@ -332,6 +383,7 @@ plot_exwel <- function(dat, par, models, wel_var, class_vars = win_vars, ylim = 
 
 	p <- p + coord_cartesian(ylim = ylim)
 	p <- p + labs(title = title, x = xlab, y = paste("Value of Estimated", wel_var, "- Real", wel_var), color = "Classified Model")
+	p <- p + scale_linetype(guide = "none")
 	p <- p + theme(plot.title = element_text(hjust = 0.5), legend.position = "bottom")
 	
 	return(p)
@@ -399,6 +451,8 @@ plot_exwel_diff <- function(dat, par, models, wel_var, class_var1 = win_vars[1],
 #	wv_label_fun(class_vars) %>% print
 #	cat("\n\n\n")
 
+	par <- par_labels(par)
+
 #	dat$win     <- factor(dat$win,     levels = 1:length(class_vars), labels = class_vars)
 	dat$model   <- factor(dat$model,   levels = 1:length(mods), labels = label_fun(mods))
 	dat$par_grp <- factor(dat$par_grp, levels = 1:length(par),  labels = par)
@@ -424,64 +478,8 @@ plot_exwel_diff <- function(dat, par, models, wel_var, class_var1 = win_vars[1],
 
 	p <- p + coord_cartesian(ylim = ylim)
 	p <- p + labs(title = title, x = xlab, y = paste("Value of Estimated", wel_var, "- Real", wel_var), color = "Classified Model")
+	p <- p + scale_linetype(guide = "none")
 	p <- p + theme(plot.title = element_text(hjust = 0.5), legend.position = "bottom")
-	
-	return(p)
-}
-
-welfare5 <- function(dat, mod, par, wel_var, win_var, legpos = "none", yaxis = F) {
-	#dbug <- 1
-	#print(paste("here:", dbug)) ; dbug <- dbug + 1
-
-	cat(c("Plotting Welfare for 5%", "\n"))
-
-	N <- nrow(dat)
-
-	dat$cor <- 1
-
-	dat05 <- dat
-
-	dat05$cor <- ifelse(dat[[win_var]] == "EUT", dat[[paste0("EUT_", wel_var)]], NA)
-
-	dat.eut <- dat05
-	dat.eut$mod <- 1
-
-	dat05$cor <- ifelse(dat[[win_var]] == "PRE", dat[[paste0("PRE_", wel_var)]], NA)
-
-	dat.pre <- dat05
-	dat.pre$mod <- 2
-
-	dat <- rbind(dat.eut, dat.pre)
-	dat$mod <- factor(dat$mod, c(1, 2), labels = c("EUT", "RDU Prelec"))
-
-	# Take the difference between the estimate and the real values for the welfare metric
-	dat$cor <- dat$cor - dat[[paste0("real_", wel_var)]]
-	#dat$cor <- abs(dat$cor)
-	# Reduce the final datafram as much as possible, its duplicated once and the entire dataframe is saved
-	# in the plot. This can really chow RAM, so only keep the variables needed for the plot.
-
-	dat$mugrp <- 0
-	dat$mugrp <- ifelse(dat$mu < .1, 1, dat$mugrp)
-	dat$mugrp <- ifelse(dat$mu < .2 & dat$mugrp ==0, 2, dat$mugrp)
-	dat$mugrp <- ifelse(dat$mu < .3 & dat$mugrp ==0, 3, dat$mugrp)
-	dat$mugrp <- factor(dat$mugrp, levels=1:3, 
-											labels=c(latex2exp::TeX("$0.01\\, <\\, \\lambda\\, <\\, 0.1$", output = "text"),
-															 latex2exp::TeX("$0.1\\, <\\, \\lambda\\, <\\, 0.2$",  output = "text"),
-															 latex2exp::TeX("$0.2\\, <\\, \\lambda\\, <\\, 0.3$",  output = "text")))
-
-	dat <- dat %>%
-		select_(par, "cor", "mod", "mugrp") %>%
-		filter(!is.na(cor))
-
-	rows <- nrow(dat)
-
-	p <- ggplot(dat, aes_string(x = par, y = "cor"))
-	p <- p + facet_grid(mugrp~., labeller = label_parsed)
-#	p <- p + geom_point(aes(color = mod), alpha = 0.1)
-	p <- p + geom_smooth(span = 0.15, aes(color = mod))
-	p <- p + coord_cartesian(ylim = c(-80,2.5))
-	p <- p + labs(title = paste(mod, "Subjects"), x = paste(par, "Value"), y = paste("Absolute Value of Estimated", wel_var, "- Real", wel_var), color = "Classified Model")
-	p <- p + theme(plot.title = element_text(hjust = 0.5), legend.position = legpos)
 	
 	return(p)
 }
@@ -511,8 +509,8 @@ if (do_win_all) {
 		select_(~starts_with(win_var), "r", "mu", "alpha", "beta", "model")
 
 	p <- plot_win(dat = RDAT , par = c("mu"), models = mods, win_var = win_var)
-
-	ggsave(paste0(win_var, "-all-win-", inst, ".", dev.type), plot = p, device = dev.type, path = inst_plot_dir, width = width, height = height * 2, units = units)
+	hmult <- (2*length(par_model("EUT")) / 2) ^ 0.7
+	ggsave(paste0(win_var, "-all-win-", inst, ".", dev.type), plot = p, device = dev.type, path = inst_plot_dir, width = width, height = height * hmult, units = units)
 
 	rm(list = c("p", "RDAT"))
 }
@@ -522,8 +520,8 @@ if (do_wel_all) {
 		select_(~starts_with(win_var), "r", "mu", "alpha", "beta", "model")
 
 	p <- plot_wel(dat = RDAT, par = c("mu"), models = mods, wel_var = wel_var, win_var = win_var)
-
-	ggsave(paste0(win_var, "-mu-wel-", inst, ".", dev.type), plot = p, device = dev.type, path = inst_plot_dir, width = width, height = height, units = units)
+	hmult <- (length(par_model("EUT")) / 2) ^ 0.7
+	ggsave(paste0(win_var, "-mu-wel-", inst, ".", dev.type), plot = p, device = dev.type, path = inst_plot_dir, width = width, height = height * hmult, units = units)
 
 	rm(list = c("p", "RDAT"))
 }
@@ -534,7 +532,9 @@ if (do_win_ind) {
 
 	for (mod in pop_mods) {
 		p <- plot_win(filter(RDAT, model == mod) , par = par_model(mod), models = mod, win_var = win_var)
-		ggsave(paste0(win_var, "-", mod, "-win-",  inst, ".", dev.type), plot = p, device = dev.type, path = inst_plot_dir, width = width, height = 2*height, units = units)
+
+		hmult <- ( ifelse(mod == "EUT", 2, 1) * length(par_model(mod)) / 2) ^ 0.7
+		ggsave(paste0(win_var, "-", mod, "-win-",  inst, ".", dev.type), plot = p, device = dev.type, path = inst_plot_dir, width = width, height = height * hmult, units = units)
 	}
 
 	rm(list = c("p", "RDAT"))
@@ -545,8 +545,9 @@ if (do_wel_ind) {
 		select_(~starts_with(win_var), "r", "mu", "alpha", "beta", "model")
 
 	for (mod in pop_mods) {
-		p <- plot_wel(filter(RDAT, model == mod) , par = par_model(mod), models = mod, wel_var = wel_var, win_var = win_var, ylim = ylim_model(mod))
-		ggsave(paste0(win_var, "-", mod, "-wel-", inst, ".", dev.type), plot = p, device = dev.type, path = inst_plot_dir, width = width, height = height, units = units)
+		p <- plot_wel(filter(RDAT, model == mod) , par = par_model(mod), models = mod, wel_var = wel_var, win_var = win_var, ylim = ylim_model(mod, inst))
+		hmult <- (length(par_model(mod)) / 2) ^ 0.7
+		ggsave(paste0(win_var, "-", mod, "-wel-", inst, ".", dev.type), plot = p, device = dev.type, path = inst_plot_dir, width = width, height = height * hmult, units = units)
 	}
 
 	rm(list = c("p", "RDAT"))
@@ -603,8 +604,8 @@ if (do_exwel_ind) {
 		select_(~ends_with("_ewel_point"), "r", "mu", "alpha", "beta", "model")
 
 	for (mod in pop_mods) {
-		hmult <- sqrt(length(par_model(mod)))
-		p <- plot_exwel(filter(RDAT, model == mod) , par = par_model(mod), models = mod, wel_var = wel_var, ylim = ylim_model("PRE"))
+		hmult <- (length(par_model(mod)) / 2) ^ 0.8
+		p <- plot_exwel(filter(RDAT, model == mod) , par = par_model(mod), models = mod, wel_var = wel_var, ylim = ylim_model("PRE", inst))
 		ggsave(paste0(mod, "-exwel-", inst, ".", dev.type), plot = p, device = dev.type, path = inst_plot_dir, scale = 1.2, width = width, height = height * hmult, units = units)
 	}
 
@@ -616,7 +617,7 @@ if (do_exwel_diff_ind) {
 		select_(~ends_with("_ewel_point"), "r", "mu", "alpha", "beta", "model")
 
 	for (mod in pop_mods) {
-		hmult <- sqrt(length(par_model(mod)))
+		hmult <- (length(par_model(mod)) / 2) ^ 0.8
 		p <- plot_exwel_diff(filter(RDAT, model == mod) , par = par_model(mod), models = mod, wel_var = wel_var, ylim = c(-5, 2.5))
 		ggsave(paste0(mod, "-exwel-diff-", inst, ".", dev.type), plot = p, device = dev.type, path = inst_plot_dir, scale = 1.2, width = width, height = height * hmult, units = units)
 	}
@@ -628,6 +629,9 @@ print(warnings())
 
 }
 
+
+
+
 all_exwel <- function(insts) {
 
 cat(c("Plotting for all instruments", "\n"))
@@ -638,7 +642,14 @@ FDAT <- c.lapply(insts, function(inst) {
 	load(paste0(data_dir, inst, "-fitted.Rda"))
 	dat <- get(inst)
 	dat$inst <- inst
-	for (win_var in win_vars) {
+
+	if (inst == "HNG_1") {
+		win_vars2 <- win_vars
+	} else {
+		win_vars2 <- "win_05"
+	}
+
+	for (win_var in win_vars2) {
 		dat[[paste0(inst, "_", win_var, "_ewel_point")]] <- dat[[paste0(win_var, "_ewel_point")]]
 	}
 	return(dat)
@@ -660,15 +671,20 @@ FDAT <- FDAT %>%
 
 new_vars <- c()
 for (inst in insts) {
-	for (win_var in win_vars) {
+	if (inst == "HNG") {
+		win_vars2 <- "win_05"
+	} else {
+		win_vars2 <- win_vars
+	}
+	for (win_var in win_vars2) {
 		new_vars <- c(new_vars, paste0(inst, "_", win_var))
 	}
 }
 
 c.lapply(pop_mods, function(mod) {
-	hmult <- sqrt(length(par_model(mod)))
-	p <- plot_exwel(filter(FDAT, model == mod) , par = par_model(mod), models = mod, wel_var = wel_var, class_vars = new_vars, ylim = ylim_model("PRE"))
-	ggsave(paste0(mod, "-exwel-full.", dev.type), plot = p, device = dev.type, path = plot_dir, scale = 1.2, width = width, height = height * hmult, units = units)
+	hmult <- (length(par_model(mod)) / 2) ^ 0.8
+	p <- plot_exwel(filter(FDAT, model == mod) , par = par_model(mod), models = mod, wel_var = wel_var, class_vars = new_vars, ylim = ylim_model("PRE", insts))
+	ggsave(paste0(mod, "-exwel-full.", dev.type), plot = p, device = dev.type, path = plot_dir, scale = 1, width = width, height = height * hmult, units = units)
 })
 
 }
@@ -712,10 +728,93 @@ for (inst in insts) {
 
 c.lapply(pop_mods, function(mod) {
 	hmult <- sqrt(length(par_model(mod)))
-	p <- plot_exwel_diff(filter(FDAT, model == mod) , par = par_model(mod), models = mod, wel_var = wel_var, class_vars = new_vars, ylim = ylim_model("PRE"))
+	p <- plot_exwel_diff(filter(FDAT, model == mod) , par = par_model(mod), models = mod, wel_var = wel_var, class_vars = new_vars, ylim = ylim_model("PRE", insts))
 	ggsave(paste0(mod, "-exwel-full.", dev.type), plot = p, device = dev.type, path = plot_dir, scale = 1.2, width = width, height = height * hmult, units = units)
 })
 
 }
 
 
+all_correct_prob <- function(insts) {
+
+dbug <- 0
+
+cat(c("Plotting Prob of Correct for all instruments", "\n"))
+
+# Get the Data
+FDAT <- lapply(insts, function(inst) {
+	cat(c(rep(" ", 2), "Loading", inst, "\n"))
+	load(paste0(data_dir, inst, "-fitted.Rda"))
+	dat <- get(inst)
+	dat$inst <- inst
+	dat[["correct_prob"]] <- ifelse(dat[["model"]] == "PRE", dat$win_05_PRE_prob,
+	                         ifelse(dat[["model"]] == "EUT", dat$win_05_EUT_prob, NA))
+	dat <- dat %>%
+		select(correct_prob, r, mu, alpha, beta, model, inst)
+	return(dat)
+})
+
+FDAT <- do.call(rbind, FDAT)
+
+all_dat <- split(FDAT, FDAT$model)
+
+cat(c("Plotting for all dat", "\n"))
+null <- lapply(names(all_dat), plot_correct, fdat = all_dat, fsuffix = "ALL", insts = insts)
+
+FDAT <- FDAT %>%
+	filter(model == "PRE" | model == "EUT")
+
+all_dat <- split(FDAT, FDAT$model)
+
+cat(c("Plotting for converged dat", "\n"))
+null <- lapply(names(all_dat), plot_correct, fdat = all_dat, fsuffix = "CON", insts = insts)
+
+}
+
+plot_correct <- function(mod, fdat, fsuffix, insts) {
+		#dbug <- 0
+		#cat("here", dbug, "\n") ; dbug <- dbug + 1
+
+	par <- par_model(mod)
+	dat <- fdat[[mod]]
+
+	row0 <- nrow(dat)
+	dat0 <- dat
+	dat  <- dat[rep(seq_len(row0), length(par)), ]
+	dat$par <- NA
+	dat$par_grp <- NA
+	for (i in 1:length(par)) {
+		start <- (i-1)*row0 + 1
+		end   <- i*row0
+		dat$par[start:end]     <- dat0[[par[i]]]
+		dat$par_grp[start:end] <- i
+	}
+	rm(dat0)
+
+	par <- par_labels(par)
+
+	dat$par_grp <- factor(dat$par_grp, levels = 1:length(par),      labels = par)
+	dat$inst    <- factor(dat$inst,    levels = insts,    labels = inst_labels(insts))
+
+	p <- ggplot(dat, aes(x = par, y = correct_prob, color = inst, linetype = inst))
+	p <- p + scale_y_continuous(limits = c(0,1))
+
+	wrap_cols <- ceiling(sqrt(length(par)))
+	p    <- p + facet_wrap(~par_grp, scales = "free_x", ncol = wrap_cols)
+
+	#p <- p + geom_point()
+	p <- p + geom_smooth(se = F)
+
+	title_mods <- label_fun(mod)
+	title      <- paste("Probability of Correct Classification for", title_mods, "Subjects")
+
+	p <- p + labs(title = title, x = "Parameter Value", y = "Probability of Correct Classification", color = "Instument Repetitions")
+	p <- p + scale_linetype(guide = "none")
+	p <- p + theme(plot.title = element_text(hjust = 0.5), legend.position = "bottom")
+
+	hmult <- sqrt(length(par))
+
+	cat("  Saving for", mod, "\n")
+	ggsave(paste0(mod, "-cprob-full-", fsuffix, ".", dev.type), plot = p, device = dev.type, path = plot_dir, 
+	       scale = 1.2, width = width, height = height * hmult, units = units)
+}
