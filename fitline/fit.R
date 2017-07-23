@@ -120,7 +120,8 @@ fitter <- function(inst) {
 }
 
 if (length(insts) > length(win_vars)) {
-	c.lapply(insts, fitter)
+	#c.lapply(insts, fitter)
+	lapply(insts, fitter)
 } else {
 	lapply(insts, fitter)
 }

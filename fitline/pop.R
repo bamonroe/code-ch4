@@ -31,10 +31,7 @@ pred_per_win <- function(class_var, dat, inst) {
 	wel  <- lapply(pop_mods, pred_per_mod, gam_mod = gam_mod, ptype = "wel",  dat = dat, mods = mmods)
 	names(wel) <- pop_mods
 
-	expec <- lapply(pop_mods, function(pop_mod) {
-		expec <- prob[[pop_mod]] * wel[[pop_mod]]
-		rowSums(as.matrix(expec))
-	})
+	expec <- lapply(pop_mods, function(pop_mod) { as.matrix(rowSums(prob[[pop_mod]] * wel[[pop_mod]])) })
 
 	prob  <- lapply(prob,  colMeans)
 	wel   <- lapply(wel,   colMeans)
@@ -56,11 +53,15 @@ pred_per_win <- function(class_var, dat, inst) {
 	prob_na <- lapply(pop_mods, pred_per_mod, gam_mod = gam_mod, ptype = "prob", dat = dat, mods = mmods)
 	prob_na <- lapply(prob_na,  colMeans)
 	prob_na <- do.call(rbind, prob_na)
+
 	colnames(prob_na) <- mmods
 	rownames(prob_na) <- paste0(pop_mods, "_pop")
 
-	save(prob, wel, prob_na, file = paste0(fit_dir, inst, "-", class_var, "-table.Rda"))
+	print(prob)
+	print(wel)
+	print(prob_na)
 
+	save(prob, wel, prob_na, file = paste0(fit_dir, inst, "-", class_var, "-table.Rda"))
 }
 
 ln_mean <- function(mean, sd) {
@@ -72,15 +73,13 @@ ln_sd <- function(mean, sd) {
 }
 
 mk_pop <- function(pop_mod, NN) {
-
 #	dbug <- 1
 #	print(paste("Here:", dbug)) ; dbug <- dbug + 1
-
 	pop <- list(
-		EUT = list(means = c(r = 0.5, mu = 0.1),                            std = c(r = 0.1, mu = 0.02)),
-		POW = list(means = c(r = 0.5, alpha = 0.65, mu = 0.1),              std = c(r = 0.1, alpha = 0.1, mu = 0.02)),
-		INV = list(means = c(r = 0.5, alpha = 0.65, mu = 0.1),              std = c(r = 0.1, alpha = 0.1, mu = 0.02)),
-		PRE = list(means = c(r = 0.5, alpha = 0.65, beta = 0.65, mu = 0.1), std = c(r = 0.1, alpha = 0.1, beta = 0.1, mu = 0.02))
+		EUT = list(means = c(r = 0.4, mu = 0.1),                            std = c(r = 0.1, mu = 0.02)),
+		POW = list(means = c(r = 0.4, alpha = 0.65, mu = 0.1),              std = c(r = 0.1, alpha = 0.1, mu = 0.02)),
+		INV = list(means = c(r = 0.4, alpha = 0.65, mu = 0.1),              std = c(r = 0.1, alpha = 0.1, mu = 0.02)),
+		PRE = list(means = c(r = 0.4, alpha = 0.65, beta = 1.65, mu = 0.1), std = c(r = 0.1, alpha = 0.1, beta = 0.1, mu = 0.02))
 	)
 	per     <- list(EUT = 3, POW = 1, INV = 1, PRE = 1)
 
@@ -130,12 +129,21 @@ mk_pop <- function(pop_mod, NN) {
 }
 
 pred_pop <- function(inst) {
-	cjat("Predicting Pop for", inst, "\n")
+	cat("Predicting Pop for", inst, "\n")
 
 	dat <- lapply(pop_mods, mk_pop, NN = 10000)
 	names(dat) <- pop_mods
 
-	lapply(win_vars, pred_per_win, dat = dat, inst = inst)
+	if (len_insts > len_win_vars) {
+		lapply(win_vars, pred_per_win, dat = dat, inst = inst)
+	} else {
+		c.lapply(win_vars, pred_per_win, dat = dat, inst = inst)
+	}
+}
 
+if (len_insts > len_win_vars) {
+	c.lapply(insts, pred_pop)
+} else {
+	lapply(insts, pred_pop)
+}
 
-lapply(insts, pred_pop)
