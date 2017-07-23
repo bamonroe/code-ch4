@@ -1,11 +1,8 @@
 mkwin <- function(inst) {
 	cat(paste("Winner:", inst, "\n"))
-
 	load_suffix <- "-bak.Rda"
 	save_suffix <- "-bak.Rda"
-
 	load(paste0(data_dir, inst, load_suffix))
-
 	dat <- get(inst)
 
 	# Apply the exclusionary rules
@@ -29,11 +26,10 @@ mkwin <- function(inst) {
 		dat$default <- ifelse(!is.na(dat[[paste0(def, "_pval")]]), def, dat$default)
 	}
 
-#	print("win")
-#	dat$win_05 %>% factor %>% summary %>% print
-#	print("default")
-#	dat$default %>% factor %>% summary %>% print
-
+	#print("win")
+	#dat$win_05 %>% factor %>% summary %>% print
+	#print("default")
+	#dat$default %>% factor %>% summary %>% print
 	#win <- dat %>% select(starts_with("win"), model)
 	#win.p <- win %>% filter(model == "PRE") %>% apply(1, factor) %>% t
 	#win.e <- win %>% filter(model == "EUT") %>% apply(1, factor) %>% t
@@ -59,7 +55,7 @@ win2 <- function(inst) {
 
 	dat <- get(oname)
 
-	ss <- seq(from = 0.2, to = .7, by = 0.08)
+	ss <- seq(from = 0.2, to = .7, length.out = 4)
 	lb <- 1 - ss
 	ub <- 1.3 + ss
 
@@ -78,7 +74,10 @@ win2 <- function(inst) {
 
 	stats <- cbind(astat, bstat) %>% as.data.frame
 
-	names(stats) <- c(paste0("PRE_astat_", round(lb, 2), "_", round(ub, 2)),
+	stats_names <- c(paste0("PRE_astat_", round(lb, 2), "_", round(ub, 2)),
+	                  paste0("PRE_bstat_", round(lb, 2), "_", round(ub, 2)))
+
+	colnames(stats) <- c(paste0("PRE_astat_", round(lb, 2), "_", round(ub, 2)),
 	                  paste0("PRE_bstat_", round(lb, 2), "_", round(ub, 2)))
 
 	new_names <- paste0("PRE_dstat_", round(lb, 2), "_", round(ub, 2))
@@ -93,6 +92,8 @@ win2 <- function(inst) {
 }
 
 win2_merge <- function(inst, stats) {
+	#dbug <- 0
+	#print(paste0("here", dbug)) ; dbug <- dbug + 1
 
 	load_suffix <- "-bak.Rda"
 
@@ -118,15 +119,14 @@ win2_merge <- function(inst, stats) {
 	stats05  <- stats05a | stats05b
 	stats05  <- ifelse(stats05, "PRE", NA)
 
-	colnames(stats10) <- paste0(new_names, "_s10")
-	colnames(stats05) <- paste0(new_names, "_s05")
-
 	stats <- cbind(stats10, stats05)
-	sname <- colnames(stats)
+	sname <- c(paste0(new_names, "_s10"), paste0(new_names, "_s05"))
+
+	colnames(stats) <- sname
+
 	save(sname, file = paste0(data_dir, "stat_names.Rda"))
 
-	stats <- stats[dat$ID, ]
-
+	stats    <- stats[dat$ID, ]
 	statsEUT <- cbind(dat$EUT_pval, stats)
 
 	stats <- apply(statsEUT, 1, function(row) {
@@ -136,12 +136,19 @@ win2_merge <- function(inst, stats) {
 		ifelse(is.na(out), "NA", out)
 	}) %>% t()
 
-	dat <- cbind(dat, stats)
+	# Add Statse to the rest of the data
+	dat[,sname] <- stats
+
+	dat %>% select(starts_with("PRE_dstat")) %>% apply(2, factor) %>% summary %>% print
 
 	assign(inst, dat)
+
+	win_vars <- unique(c(win_vars, sname))
+
+	assign("win_vars", win_vars, envir = .GlobalEnv)
+
 	save(list = inst, file = paste0(data_dir, inst, load_suffix))
 }
-
 
 testit <- function(bvec2, bvec3, lb, ub) {
 

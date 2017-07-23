@@ -28,16 +28,21 @@ mkmini_1 <- function(inst, mods) {
 
 mkmini_2 <- function(inst, mods, wel_var) {
 	cat(paste("Mini2:", inst, "\n"))
-
 	load_suffix <- "-bak.Rda"
 	save_suffix <- "-bak.Rda"
-
 	load(paste0(data_dir, inst, load_suffix))
 
 	dat <- get(inst)
+	cn  <- colnames(dat)
 
-	dat <- dat %>%
-		select(matches(paste0(win_vars, collapse = "|")), default, starts_with("real"), ends_with(wel_var), r, mu, alpha, beta, model)
+	#keep_vars <- c(win_vars, grep("^real", cn, value = T), grep(paste0(".*", wel_var, "$"), cn, value = T), "r", "mu", "alpha", "beta", "model", "ID")
+	keep_vars <- c(win_vars, grep("^real", cn, value = T), grep(paste0(".*", wel_var, "$"), cn, value = T), "r", "mu", "alpha", "beta", "model")
+	keep_vars <- unique(keep_vars)
+
+	dat <- dat[,keep_vars]
+
+#	dat <- dat %>%
+#		select(matches(paste0(win_vars, collapse = "|")), default, starts_with("real"), ends_with(wel_var), r, mu, alpha, beta, model, ID)
 		#select(starts_with("win"), default, starts_with("real"), ends_with(wel_var), r, mu, alpha, beta, model)
 
 	assign(inst, dat)
